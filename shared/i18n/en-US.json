@@ -7926,8 +7926,8 @@
   "sidebar.message.rename_sql_directory_failed": "Failed to rename directory: {{error}}",
   "sidebar.message.rename_sql_file_failed": "Failed to rename SQL file: {{error}}",
   "sidebar.message.routine_deleted": "{{type}} deleted.",
-  "sidebar.message.object_compile_failed": "Failed to compile {{type}} \u201c{{name}}\u201d: {{error}}",
-  "sidebar.message.object_compile_success": "{{type}} \u201c{{name}}\u201d compiled and the object tree was refreshed.",
+  "sidebar.message.object_compile_failed": "Failed to compile {{type}} “{{name}}”: {{error}}",
+  "sidebar.message.object_compile_success": "{{type}} “{{name}}” compiled and the object tree was refreshed.",
   "sidebar.message.object_compile_target_invalid": "The selected object cannot be compiled.",
   "sidebar.message.saved_query_group_created": "Saved query group created.",
   "sidebar.message.saved_query_group_delete_failed": "Failed to delete saved query group: {{error}}",
@@ -9825,5 +9825,13 @@
   "message_queue_workbench.metadata.tag": "Tag",
   "message_queue_workbench.value.boolean.false": "No",
   "message_queue_workbench.value.boolean.true": "Yes",
-  "message_queue_workbench.tab_kind": "Messages"
+  "message_queue_workbench.tab_kind": "Messages",
+  "ai_settings.provider_preset.grok.label": "Grok Subscription",
+  "ai_settings.provider_preset.grok.desc": "Local Grok CLI / Grok subscription login",
+  "ai_settings.form.local_cli.grok_hint": "Uses the Grok CLI sign-in on this machine. Run `grok` once and finish login before testing. This mode supports chat and SQL generation only; it does not call database tools or local CLI tools.",
+  "ai_settings.form.effort": "Reasoning effort",
+  "ai_settings.form.effort_hint": "Values come from this CLI itself and differ between CLIs. Leave empty to keep the CLI default.",
+  "ai_settings.form.effort_hint_unverified": "This CLI does not validate the effort value on load, so the list is inferred rather than measured. Leave empty to keep the CLI default.",
+  "ai_settings.form.effort_placeholder": "CLI default: ",
+  "ai_settings.form.effort_placeholder_empty": "Keep the CLI default"
 }

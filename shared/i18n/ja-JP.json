@@ -9825,5 +9825,13 @@
   "message_queue_workbench.metadata.tag": "タグ",
   "message_queue_workbench.value.boolean.false": "いいえ",
   "message_queue_workbench.value.boolean.true": "はい",
-  "message_queue_workbench.tab_kind": "メッセージ"
+  "message_queue_workbench.tab_kind": "メッセージ",
+  "ai_settings.provider_preset.grok.label": "Grok Subscription",
+  "ai_settings.provider_preset.grok.desc": "Local Grok CLI / Grok subscription login",
+  "ai_settings.form.local_cli.grok_hint": "Uses the Grok CLI sign-in on this machine. Run `grok` once and finish login before testing. This mode supports chat and SQL generation only; it does not call database tools or local CLI tools.",
+  "ai_settings.form.effort": "Reasoning effort",
+  "ai_settings.form.effort_hint": "Values come from this CLI itself and differ between CLIs. Leave empty to keep the CLI default.",
+  "ai_settings.form.effort_hint_unverified": "This CLI does not validate the effort value on load, so the list is inferred rather than measured. Leave empty to keep the CLI default.",
+  "ai_settings.form.effort_placeholder": "CLI default: ",
+  "ai_settings.form.effort_placeholder_empty": "Keep the CLI default"
 }

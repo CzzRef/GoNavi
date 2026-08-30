@@ -12,6 +12,8 @@ import {
   type ProviderPresetEndpoint,
 } from '../../utils/aiProviderPresets';
 import { isProviderSecretRequirementSatisfied } from '../../utils/providerSecretDraft';
+import { AIGetCLICapabilities, AIListCLIModels } from '../../../wailsjs/go/aiservice/Service';
+import type { ai } from '../../../wailsjs/go/models';
 import type { OverlayWorkbenchTheme } from '../../utils/overlayWorkbenchTheme';
 import {
   PROVIDER_PRESET_CARD_BASE_STYLE,
@@ -120,6 +122,32 @@ const AISettingsProvidersSection: React.FC<AISettingsProvidersSectionProps> = ({
   const presetFromForm = providerPresets.find((preset) => preset.key === presetKeyFromForm);
   const endpointOptions = presetFromForm?.endpoints || [];
   const usesLocalCLI = presetFromForm?.authMode === 'local-cli';
+  // 档位的合法值域由目标 CLI 决定，三个 CLI 两两不同；前端只做投影，不维护副本。
+  const [cliCapabilities, setCLICapabilities] = React.useState<ai.CLICapabilityView[]>([]);
+  React.useEffect(() => {
+    let cancelled = false;
+    AIGetCLICapabilities()
+      .then((views) => { if (!cancelled) setCLICapabilities(views || []); })
+      // 取不到能力表时退化为不显示档位控件，而不是显示一个无效的输入框。
+      .catch(() => { if (!cancelled) setCLICapabilities([]); });
+    return () => { cancelled = true; };
+  }, []);
+  const activeCLICapability = usesLocalCLI
+    ? cliCapabilities.find((item) => item.apiFormat === String(watchedApiFormat || '').trim().toLowerCase())
+    : undefined;
+  // 只有 CLI 自己能枚举时才去问它；枚举失败一律退回手填，不把「不可枚举」显示成错误。
+  const discoverableApiFormat = activeCLICapability?.supportsModelDiscovery
+    ? activeCLICapability.apiFormat
+    : '';
+  const [discoveredModels, setDiscoveredModels] = React.useState<string[]>([]);
+  React.useEffect(() => {
+    if (!discoverableApiFormat) { setDiscoveredModels([]); return; }
+    let cancelled = false;
+    AIListCLIModels(discoverableApiFormat)
+      .then((list) => { if (!cancelled) setDiscoveredModels(Array.isArray(list) ? list : []); })
+      .catch(() => { if (!cancelled) setDiscoveredModels([]); });
+    return () => { cancelled = true; };
+  }, [discoverableApiFormat]);
   const supportsAdvancedEndpoint = presetKeyFromForm === 'custom' || presetKeyFromForm === 'ollama' || presetKeyFromForm === 'codebuddy' || presetKeyFromForm === 'cursor';
   const supportsModelList = supportsAdvancedEndpoint || usesLocalCLI;
   const showsApiFormat = presetKeyFromForm === 'custom' || presetKeyFromForm === 'openai' || presetKeyFromForm === 'deepseek';
@@ -418,6 +446,7 @@ const AISettingsProvidersSection: React.FC<AISettingsProvidersSectionProps> = ({
                     : cursorUsesOptionalModel
                       ? copy('ai_settings.form.model_list_placeholder.cursor')
                       : copy('ai_settings.form.model_list_placeholder')}
+                  options={discoveredModels.map((value) => ({ label: value, value }))}
                   style={{ width: '100%' }}
                 />
               </Form.Item>
@@ -454,6 +483,7 @@ const AISettingsProvidersSection: React.FC<AISettingsProvidersSectionProps> = ({
             <KeyOutlined style={{ fontSize: 14 }} /> {copy('ai_settings.form.section.auth_connection')}
           </div>
           {usesLocalCLI ? (
+            <>
             <div
               role="note"
               style={{
@@ -471,8 +501,30 @@ const AISettingsProvidersSection: React.FC<AISettingsProvidersSectionProps> = ({
               </div>
               {copy(presetKeyFromForm === 'codex'
                 ? 'ai_settings.form.local_cli.codex_hint'
+                : presetKeyFromForm === 'grok'
+                ? 'ai_settings.form.local_cli.grok_hint'
                 : 'ai_settings.form.local_cli.claude_hint')}
             </div>
+            {activeCLICapability?.supportsEffort ? (
+              <Form.Item
+                label={<span style={{ fontWeight: 500, color: overlayTheme.titleText }}>{copy('ai_settings.form.effort')}</span>}
+                name="effort"
+                extra={activeCLICapability.effortValuesVerified
+                  ? copy('ai_settings.form.effort_hint')
+                  : copy('ai_settings.form.effort_hint_unverified')}
+                style={{ marginBottom: 0 }}
+              >
+                <Select
+                  allowClear
+                  size="middle"
+                  placeholder={activeCLICapability.defaultEffort
+                    ? `${copy('ai_settings.form.effort_placeholder')}${activeCLICapability.defaultEffort}`
+                    : copy('ai_settings.form.effort_placeholder_empty')}
+                  options={(activeCLICapability.effortValues || []).map((value) => ({ label: value, value }))}
+                />
+              </Form.Item>
+            ) : null}
+          </>
           ) : (
             <Form.Item
               label={<span style={{ fontWeight: 500, color: overlayTheme.titleText }}>{codeBuddyUsesOptionalSecret ? copy('ai_settings.form.api_key.codebuddy_optional') : copy('ai_settings.form.api_key')}</span>}

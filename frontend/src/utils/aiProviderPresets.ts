@@ -25,8 +25,8 @@ export const QWEN_CODING_PLAN_MODELS = [
   'glm-4.7',
 ];
 
-const CUSTOM_LIKE_PRESET_KEYS = new Set(['custom', 'ollama', 'codebuddy', 'cursor', 'codex', 'claude-subscription']);
-const OPTIONAL_MODEL_PRESET_KEYS = new Set(['cursor', 'codex', 'claude-subscription']);
+const CUSTOM_LIKE_PRESET_KEYS = new Set(['custom', 'ollama', 'codebuddy', 'cursor', 'codex', 'claude-subscription', 'grok']);
+const OPTIONAL_MODEL_PRESET_KEYS = new Set(['cursor', 'codex', 'claude-subscription', 'grok']);
 
 export interface ResolvePresetModelSelectionInput {
   presetKey: string;
@@ -90,7 +90,7 @@ export const isLocalCLISubscriptionProvider = (
   const apiFormat = String(provider.apiFormat || '').trim().toLowerCase();
   return providerType === 'custom'
     && authMode === 'local-cli'
-    && (apiFormat === 'codex-cli' || apiFormat === 'claude-cli');
+    && (apiFormat === 'codex-cli' || apiFormat === 'claude-cli' || apiFormat === 'grok-cli');
 };
 
 export const getProviderHostname = (raw?: string): string => {
@@ -183,7 +183,7 @@ export const resolveProviderPresetKey = (
   const inferredAuthMode: AIProviderAuthMode = provider.authMode
     || (fingerprint === ''
       && !hasStoredSecret
-      && ['codex-cli', 'claude-cli'].includes(provider.apiFormat || '')
+      && ['codex-cli', 'claude-cli', 'grok-cli'].includes(provider.apiFormat || '')
       ? 'local-cli'
       : 'api-key');
   const formatOnlyPreset = presets.find((preset) =>

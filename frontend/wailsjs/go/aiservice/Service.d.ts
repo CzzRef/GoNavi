@@ -34,6 +34,8 @@ export function AIGetActiveProvider():Promise<string>;
 
 export function AIGetBuiltinPrompts():Promise<Record<string, string>>;
 
+export function AIGetCLICapabilities():Promise<Array<ai.CLICapabilityView>>;
+
 export function AIGetContextLevel():Promise<string>;
 
 export function AIGetEditableProvider(arg1:string):Promise<ai.ProviderConfig>;
@@ -67,6 +69,8 @@ export function AIInstallKimiMCP():Promise<ai.MCPClientInstallResult>;
 export function AIInstallOpenCodeMCP():Promise<ai.MCPClientInstallResult>;
 
 export function AIInstallZCodeMCP():Promise<ai.MCPClientInstallResult>;
+
+export function AIListCLIModels(arg1:string):Promise<Array<string>>;
 
 export function AIListMCPTools():Promise<Array<ai.MCPToolDescriptor>>;
 

@@ -41,7 +41,9 @@ var codexCLIDisabledFeatures = []string{
 	"request_permissions_tool",
 	"memories",
 	"chronicle",
-	"child_agents_md",
+	// "child_agents_md" 已在 Codex CLI 0.150.1 中移除；继续传入会让 codex 在配置校验阶段
+	// 直接以 `Unknown feature flag: child_agents_md` 退出，导致整个 provider 不可用。
+	// 子 Agent 能力仍由下面的 multi_agent / multi_agent_v2 / enable_fanout 关闭，隔离未削弱。
 	"multi_agent",
 	"multi_agent_v2",
 	"enable_fanout",
@@ -343,6 +345,14 @@ func buildCodexCLIArgs(config ai.ProviderConfig) []string {
 	}
 	if model := strings.TrimSpace(config.Model); model != "" {
 		args = append(args, "-m", model)
+	}
+	// codex 没有专用档位 flag，只能走 -c 配置键；形态与值域由能力表持有。
+	// 注意 --ignore-user-config 已经把用户 config.toml 整个隔离掉了，
+	// 所以这里不传就等于跑 codex 内置默认档位，用户在 codex 侧调的偏好不会生效。
+	if capability, ok := LookupCLICapability("codex-cli"); ok {
+		if effort, err := capability.NormalizeEffort(config.Effort); err == nil {
+			args = capability.AppendEffortArgs(args, effort)
+		}
 	}
 	return append(args, "-")
 }

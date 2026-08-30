@@ -9825,5 +9825,13 @@
   "message_queue_workbench.metadata.tag": "标签",
   "message_queue_workbench.value.boolean.false": "否",
   "message_queue_workbench.value.boolean.true": "是",
-  "message_queue_workbench.tab_kind": "消息"
+  "message_queue_workbench.tab_kind": "消息",
+  "ai_settings.provider_preset.grok.label": "Grok 订阅",
+  "ai_settings.provider_preset.grok.desc": "本机 Grok CLI / Grok 订阅登录",
+  "ai_settings.form.local_cli.grok_hint": "使用本机 Grok CLI 的登录态。测试前先运行一次 `grok` 完成登录。当前仅支持对话和 SQL 生成，不会调用数据库工具或本机 CLI 工具。",
+  "ai_settings.form.effort": "推理档位",
+  "ai_settings.form.effort_hint": "取值由该 CLI 自身决定，各 CLI 互不相同。留空则沿用该 CLI 的默认档位。",
+  "ai_settings.form.effort_hint_unverified": "该 CLI 加载时不校验档位取值，此列表来自推断而非实测。留空则沿用其默认档位。",
+  "ai_settings.form.effort_placeholder": "CLI 默认：",
+  "ai_settings.form.effort_placeholder_empty": "沿用 CLI 默认"
 }

@@ -172,6 +172,8 @@ func NewServiceWithSecretStore(store secretstore.SecretStore) *Service {
 	if store == nil {
 		store = secretstore.NewUnavailableStore("secret store unavailable")
 	}
+	// 外部客户端探测放在后台预热，避免这 1s 量级的代价落在设置页打开的同步路径上。
+	go prewarmLocalCLICommandCache()
 	return &Service{
 		providers:        make([]ai.ProviderConfig, 0),
 		safetyLevel:      ai.PermissionReadOnly,
@@ -1355,6 +1357,24 @@ func (s *Service) AIGetContextLevel() string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return string(s.contextLevel)
+}
+
+// AIGetCLICapabilities 返回各本机 CLI 的模型/档位能力与预填值，供设置界面渲染。
+// 前端据此决定是否显示档位控件、给哪些候选值，以及模型是手填还是可枚举；
+// 它不得自己维护一份值域副本——那会随上游 CLI 版本漂移而失真。
+func (s *Service) AIGetCLICapabilities() []ai.CLICapabilityView {
+	return provider.CLICapabilityViews()
+}
+
+// AIListCLIModels 调用该 CLI 自己的模型枚举子命令，返回可选模型列表。
+// 只有能力表里声明了枚举能力的 CLI 才会真正执行；其余返回空列表，
+// 界面据此退回手填而不是把"不可枚举"显示成错误。
+func (s *Service) AIListCLIModels(apiFormat string) ([]string, error) {
+	capability, ok := provider.LookupCLICapability(apiFormat)
+	if !ok {
+		return nil, nil
+	}
+	return capability.DiscoverModels(context.Background())
 }
 
 // AISetContextLevel 设置上下文传递级别
