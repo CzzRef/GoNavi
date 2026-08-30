@@ -738,6 +738,11 @@ export interface AIProviderConfig {
   temperature: number;
   /** 思考强度：off | low | medium | high；空表示供应商默认 */
   thinkingIntensity?: string;
+  /**
+   * 本机 CLI 供应商的推理档位。合法值域由目标 CLI 决定，三个 CLI 两两不同，
+   * 候选值来自后端 AIGetCLICapabilities，前端不维护副本。空表示沿用 CLI 默认。
+   */
+  effort?: string;
 }
 
 export interface AIUserPromptSettings {
@@ -874,7 +879,9 @@ export interface AIChatMessage {
 
 export interface AISafetyResult {
   allowed: boolean;
-  operationType: "query" | "dml" | "ddl" | "other";
+  // "routine" 覆盖例程调用与例程部署，后端在任何安全级别下都不放行，
+  // 因此前端收到 routine 时 allowed 必为 false。
+  operationType: "query" | "dml" | "ddl" | "routine" | "other";
   requiresConfirm: boolean;
   warningMessage?: string;
 }

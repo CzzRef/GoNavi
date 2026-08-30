@@ -1,6 +1,7 @@
 package app
 
 import (
+	"GoNavi-Wails/internal/ai/safety"
 	"GoNavi-Wails/internal/esconsole"
 	"strings"
 	"unicode"
@@ -473,17 +474,19 @@ func isReadOnlySQLQuery(dbType string, query string) bool {
 	}
 }
 
-func explainAnalyzeMayWrite(query string) bool {
+// explainAnalyzeBody 返回 EXPLAIN ANALYZE 实际执行的语句体。
+// 只有确实带 ANALYZE 选项时才返回 ok=true —— 不带 ANALYZE 的 EXPLAIN 不执行语句体。
+func explainAnalyzeBody(query string) (string, bool) {
 	keyword, pos := nextSQLKeyword(query, 0)
 	if keyword != "explain" {
-		return false
+		return "", false
 	}
 	pos = skipSQLTrivia(query, pos)
 	analyze := false
 	if pos < len(query) && query[pos] == '(' {
 		next := skipBalancedSQLParens(query, pos)
 		if next < 0 {
-			return false
+			return "", false
 		}
 		options := query[pos+1 : next-1]
 		analyze = sqlContainsKeyword(options, "analyze") || sqlContainsKeyword(options, "analyse")
@@ -505,9 +508,16 @@ func explainAnalyzeMayWrite(query string) bool {
 
 optionsDone:
 	if !analyze {
+		return "", false
+	}
+	return query[skipSQLTrivia(query, pos):], true
+}
+
+func explainAnalyzeMayWrite(query string) bool {
+	body, ok := explainAnalyzeBody(query)
+	if !ok {
 		return false
 	}
-	body := query[skipSQLTrivia(query, pos):]
 	bodyKeyword, withHasWrite := sqlDataOperationInfo(body)
 	if withHasWrite || isSQLDataWriteKeyword(bodyKeyword) {
 		return true
@@ -615,6 +625,32 @@ func isReadOnlyPragmaWithoutArgument(name string) bool {
 		// wal_checkpoint without depending on a perpetually complete list.
 		return false
 	}
+}
+
+// isRoutineSQLStatement 判断语句是否为例程调用或例程部署。
+//
+// 在方言无关的关键字级判定（safety.IsRoutineSQL）之上叠加两项：
+//   - EXPLAIN ANALYZE 会真正执行语句体，因此对语句体递归判定，避免用 EXPLAIN ANALYZE
+//     包裹 EXECUTE/CALL 绕过闸门；
+//   - SQL Server 允许省略 EXEC 的裸过程调用（sp_xxx、xp_xxx 或 schema.proc 形式）。
+//
+// 只读语句永远优先判为查询：SQL Server 的裸调用启发式对任意标识符开头的语句都成立，
+// 若不先让只读判定胜出，SHOW/DESCRIBE 一类语句会被误判为例程。
+func isRoutineSQLStatement(dbType string, query string) bool {
+	if safety.IsRoutineSQL(query) {
+		return true
+	}
+	if body, ok := explainAnalyzeBody(query); ok && safety.IsRoutineSQL(body) {
+		return true
+	}
+	if !isSQLServerDBType(dbType) {
+		return false
+	}
+	keyword := leadingSQLKeyword(query)
+	if strings.HasPrefix(keyword, "sp_") || strings.HasPrefix(keyword, "xp_") {
+		return true
+	}
+	return looksLikeSQLServerProcedureInvocation(query)
 }
 
 func isBatchableWriteSQLStatement(dbType string, query string) bool {

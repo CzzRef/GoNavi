@@ -7,6 +7,9 @@ type SQLStatementInspection struct {
 	Index    int    `json:"index"`
 	Keyword  string `json:"keyword,omitempty"`
 	ReadOnly bool   `json:"readOnly"`
+	// Routine 标记例程调用或例程部署。它与 ReadOnly 互斥：只读判定优先，
+	// 因此 Routine 为真时 ReadOnly 必为假。
+	Routine bool `json:"routine,omitempty"`
 }
 
 // SQLInspection 描述一段 SQL 文本的整体执行特征。
@@ -34,6 +37,7 @@ func InspectSQL(dbType string, sql string) SQLInspection {
 			Keyword:  leadingSQLKeyword(trimmed),
 			ReadOnly: isReadOnlySQLQuery(dbType, trimmed),
 		}
+		item.Routine = !item.ReadOnly && isRoutineSQLStatement(dbType, trimmed)
 		if !item.ReadOnly {
 			result.ReadOnly = false
 		}

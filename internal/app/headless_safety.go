@@ -86,6 +86,7 @@ func evaluateHeadlessSQLSafety(level ai.SQLPermissionLevel, dbType string, sql s
 			Keyword:  leadingSQLKeyword(statement),
 			ReadOnly: isReadOnlySQLQuery(dbType, statement),
 		}
+		inspection.Routine = !inspection.ReadOnly && isRoutineSQLStatement(dbType, statement)
 		decision.Inspection.Statements = append(decision.Inspection.Statements, inspection)
 		if !inspection.ReadOnly {
 			decision.Inspection.ReadOnly = false
@@ -113,6 +114,11 @@ func classifyHeadlessSQLOperation(dbType, statement string, inspection SQLStatem
 	if inspection.ReadOnly {
 		return ai.SQLOpQuery
 	}
+	// 例程判定必须早于 DML/DDL：CREATE PROCEDURE 的前导关键字是 create，
+	// 若先落入 DDL 分支就会跟着 DDL 的权限级别放宽。
+	if inspection.Routine {
+		return ai.SQLOpRoutine
+	}
 	if isBatchableWriteSQLStatement(dbType, statement) {
 		return ai.SQLOpDML
 	}
@@ -135,6 +141,10 @@ func normalizeHeadlessSQLSafetyLevel(level ai.SQLPermissionLevel) ai.SQLPermissi
 }
 
 func isHeadlessSQLOperationAllowed(level ai.SQLPermissionLevel, operation ai.SQLOperationType) bool {
+	// 例程调用与例程部署在任何权限级别下都不由 Agent 执行，完全模式也不放宽。
+	if operation == ai.SQLOpRoutine {
+		return false
+	}
 	switch normalizeHeadlessSQLSafetyLevel(level) {
 	case ai.PermissionReadOnly:
 		return operation == ai.SQLOpQuery
@@ -216,8 +226,8 @@ func (a *App) authorizeHeadlessConnectionProtections(config connection.Connectio
 			if err := ensureConnectionAllowsActionWithText(config, connectionProtectionStructureEdit, "connection.backend.action.import_data", a.appText); err != nil {
 				return &HeadlessSQLPolicyError{Message: err.Error()}
 			}
-		case ai.SQLOpOther:
-			// An unclassified statement can affect either data or structure.
+		case ai.SQLOpRoutine, ai.SQLOpOther:
+			// A routine body or an unclassified statement can affect either data or structure.
 			for _, protection := range []connectionProtectionKey{connectionProtectionDataEdit, connectionProtectionStructureEdit} {
 				if err := ensureConnectionAllowsActionWithText(config, protection, "connection.backend.action.import_data", a.appText); err != nil {
 					return &HeadlessSQLPolicyError{Message: err.Error()}
@@ -231,8 +241,19 @@ func (a *App) authorizeHeadlessConnectionProtections(config connection.Connectio
 // AuthorizeMCPConnectionSQL applies the same saved-connection write
 // protections as the standalone CLI. MCP performs its own shared AI-safety and
 // allowMutating checks before calling this method.
+//
+// The evaluation deliberately runs at PermissionFull because the caller already
+// applied the configured level. Operations that PermissionFull itself refuses —
+// routine invocation and routine deployment — are therefore still refused here,
+// so a caller that forgets its own check cannot execute them through this path.
 func (a *App) AuthorizeMCPConnectionSQL(config connection.ConnectionConfig, sql string) error {
 	decision := evaluateHeadlessSQLSafety(ai.PermissionFull, resolveDDLDBType(config), sql)
+	if len(decision.Disallowed) > 0 {
+		return &HeadlessSQLPolicyError{Message: fmt.Sprintf(
+			"SQL is blocked by AI safety policy: %s",
+			formatHeadlessSQLSafetyStatements(decision.Disallowed),
+		)}
+	}
 	if decision.Inspection.StatementCount == 0 || decision.Inspection.ReadOnly {
 		return nil
 	}
