@@ -93,6 +93,26 @@ type claudeCLIAuthStatus struct {
 	AuthMethod   string `json:"authMethod"`
 	APIProvider  string `json:"apiProvider"`
 	APIKeySource string `json:"apiKeySource"`
+	// SubscriptionType 是新版 Claude Code 直接给出的订阅事实（如 max / pro / team）。
+	// 它比 authMethod 的措辞可靠：2.1.241 起订阅登录的 authMethod 已改报 "claude.ai"，
+	// 只按旧的 oauth 词表判定会把真实的 Max 订阅误判成"未连接"。
+	SubscriptionType string `json:"subscriptionType"`
+}
+
+// claudeCLINonSubscriptionPlans 是明确不算订阅的取值；其余非空取值一律视为有效订阅，
+// 这样上游新增套餐名不会再次把可用账号判死。
+var claudeCLINonSubscriptionPlans = map[string]struct{}{
+	"":     {},
+	"none": {},
+	"free": {},
+}
+
+// claudeCLISubscriptionAuthMethods 是旧版 CLI 未提供 subscriptionType 时的回退词表。
+var claudeCLISubscriptionAuthMethods = map[string]struct{}{
+	"oauth":       {},
+	"oauth_token": {},
+	"claude.ai":   {},
+	"claude_ai":   {},
 }
 
 type claudeCLICommand struct {
@@ -186,8 +206,18 @@ func validateClaudeCLISubscriptionStatus(status claudeCLIAuthStatus) error {
 	if providerName != "" && providerName != "firstparty" {
 		return fmt.Errorf("Claude Code CLI is using provider %s instead of the first-party Claude subscription", status.APIProvider)
 	}
+	// subscriptionType 是权威事实，优先于 authMethod 的措辞。
+	// 只有该字段缺失（旧版 CLI）时才回退到词表匹配。
+	plan := strings.ToLower(strings.TrimSpace(status.SubscriptionType))
+	if _, notSubscription := claudeCLINonSubscriptionPlans[plan]; !notSubscription {
+		return nil
+	}
+	if status.SubscriptionType != "" {
+		return fmt.Errorf("Claude Code CLI reports subscription %s, which is not a paid Claude subscription; run claude auth login", status.SubscriptionType)
+	}
+
 	authMethod := strings.NewReplacer("-", "_", " ", "_").Replace(strings.ToLower(strings.TrimSpace(status.AuthMethod)))
-	if authMethod != "oauth" && authMethod != "oauth_token" {
+	if _, ok := claudeCLISubscriptionAuthMethods[authMethod]; !ok {
 		return fmt.Errorf("Claude Code CLI is authenticated with %s instead of a Claude subscription; run claude auth login", firstNonEmptyCLIValue(status.AuthMethod, "an unsupported method"))
 	}
 	return nil
@@ -622,6 +652,13 @@ func buildClaudeCLIArgs(config ai.ProviderConfig, prompt string, stream bool) []
 	args = append(args, "--no-session-persistence")
 	if isLocalCLIAuthMode(config) {
 		args = append(args, buildClaudeCLILocalAuthIsolationArgs()...)
+	}
+	// Claude Code 对非法 --effort 只打警告然后静默降级为默认档位并照常执行，
+	// 所以这里必须先按能力表校验；下发一个会被降级的值等于让用户以为档位生效了。
+	if capability, ok := LookupCLICapability("claude-cli"); ok {
+		if effort, err := capability.NormalizeEffort(config.Effort); err == nil {
+			args = capability.AppendEffortArgs(args, effort)
+		}
 	}
 	return args
 }

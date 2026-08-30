@@ -78,17 +78,49 @@ type codexMCPServerConfig struct {
 // AIGetMCPClientInstallStatuses 返回 GoNavi MCP 在常见外部客户端中的安装状态。
 func (s *Service) AIGetMCPClientInstallStatuses() []ai.MCPClientInstallStatus {
 	command, args, resolveErr := resolveCurrentLocalMCPCommand(s.serviceText)
-	return []ai.MCPClientInstallStatus{
-		inspectClaudeCodeMCPInstallStatus(command, args, resolveErr, s.serviceText),
-		inspectCodexMCPInstallStatus(command, args, resolveErr, s.serviceText),
-		inspectOpenCodeMCPInstallStatus(command, args, resolveErr, s.serviceText),
-		inspectExternalJSONMCPClientInstallStatus(zCodeMCPClientSpec, command, args, resolveErr, s.serviceText),
-		inspectDeepSeekHarnessMCPInstallStatus(command, args, resolveErr, s.serviceText),
-		inspectExternalJSONMCPClientInstallStatus(kimiCodeMCPClientSpec, command, args, resolveErr, s.serviceText),
-		inspectGrokBuildMCPInstallStatus(command, args, resolveErr, s.serviceText),
-		buildRemoteMCPClientInstallStatus("openclaw", "OpenClaw", s.serviceText),
-		buildRemoteMCPClientInstallStatus("hermans", "Hermans", s.serviceText),
+	// 每个 inspect 都可能触发一次命令存在性探测（未命中缓存时要起 login shell）。
+	// 它们彼此独立且只读，串行执行会把 7 次探测的耗时直接叠加到设置页打开路径上，
+	// 所以并发执行并按固定下标写回，保持返回顺序稳定。
+	inspectors := []func() ai.MCPClientInstallStatus{
+		func() ai.MCPClientInstallStatus {
+			return inspectClaudeCodeMCPInstallStatus(command, args, resolveErr, s.serviceText)
+		},
+		func() ai.MCPClientInstallStatus {
+			return inspectCodexMCPInstallStatus(command, args, resolveErr, s.serviceText)
+		},
+		func() ai.MCPClientInstallStatus {
+			return inspectOpenCodeMCPInstallStatus(command, args, resolveErr, s.serviceText)
+		},
+		func() ai.MCPClientInstallStatus {
+			return inspectExternalJSONMCPClientInstallStatus(zCodeMCPClientSpec, command, args, resolveErr, s.serviceText)
+		},
+		func() ai.MCPClientInstallStatus {
+			return inspectDeepSeekHarnessMCPInstallStatus(command, args, resolveErr, s.serviceText)
+		},
+		func() ai.MCPClientInstallStatus {
+			return inspectExternalJSONMCPClientInstallStatus(kimiCodeMCPClientSpec, command, args, resolveErr, s.serviceText)
+		},
+		func() ai.MCPClientInstallStatus {
+			return inspectGrokBuildMCPInstallStatus(command, args, resolveErr, s.serviceText)
+		},
+		func() ai.MCPClientInstallStatus {
+			return buildRemoteMCPClientInstallStatus("openclaw", "OpenClaw", s.serviceText)
+		},
+		func() ai.MCPClientInstallStatus {
+			return buildRemoteMCPClientInstallStatus("hermans", "Hermans", s.serviceText)
+		},
 	}
+	statuses := make([]ai.MCPClientInstallStatus, len(inspectors))
+	var wg sync.WaitGroup
+	for index, inspect := range inspectors {
+		wg.Add(1)
+		go func(index int, inspect func() ai.MCPClientInstallStatus) {
+			defer wg.Done()
+			statuses[index] = inspect()
+		}(index, inspect)
+	}
+	wg.Wait()
+	return statuses
 }
 
 // AIInstallClaudeCodeMCP 把 GoNavi 的 MCP server 写入 Claude Code 用户级 MCP 配置。
@@ -469,11 +501,79 @@ func portablePathDir(path string) string {
 	return normalized[:separator]
 }
 
+// localCLICommandDetectionTTL 决定命令存在性探测结果的复用窗口。
+//
+// 未命中缓存时，每个缺失命令都要把所有候选 shell 各起一次 login shell 才能定论，
+// 实测单个命令约 1s（完整 PATH）到 0.5s（极简 PATH 下连找得到的也要走 login shell）。
+// 设置页一次要探测 7 个客户端，串行叠加就是 2–4.5s 的白屏。
+// 命令是否安装在一次会话里几乎不变，因此按短 TTL 复用；安装 MCP 配置只改配置文件，
+// 不改变命令存在性，所以不需要为安装动作单独失效。
+var localCLICommandDetectionTTL = 60 * time.Second
+
+type localCLICommandDetection struct {
+	found     bool
+	path      string
+	expiresAt time.Time
+}
+
+var (
+	localCLICommandDetectionMu    sync.Mutex
+	localCLICommandDetectionCache = map[string]localCLICommandDetection{}
+)
+
+// localCLICommandCacheKey 把探测所依赖的三个钩子的函数身份并入键。
+// 测试替换任一钩子后键即改变，缓存自然失效，因此既有用例不需要感知这层缓存，
+// 也不会被上一个用例的探测结果污染。
+func localCLICommandCacheKey(commandName string) string {
+	return fmt.Sprintf("%s\x00%x\x00%x\x00%x",
+		commandName,
+		reflect.ValueOf(localCLICommandPathFunc).Pointer(),
+		reflect.ValueOf(localCLICommandShellCandidatesFunc).Pointer(),
+		reflect.ValueOf(localCLICommandShellOutputFunc).Pointer(),
+	)
+}
+
+func lookupLocalCLICommandCache(commandName string) (localCLICommandDetection, bool) {
+	localCLICommandDetectionMu.Lock()
+	defer localCLICommandDetectionMu.Unlock()
+	entry, ok := localCLICommandDetectionCache[localCLICommandCacheKey(commandName)]
+	if !ok || time.Now().After(entry.expiresAt) {
+		return localCLICommandDetection{}, false
+	}
+	return entry, true
+}
+
+func storeLocalCLICommandCache(commandName string, found bool, path string) {
+	localCLICommandDetectionMu.Lock()
+	defer localCLICommandDetectionMu.Unlock()
+	localCLICommandDetectionCache[localCLICommandCacheKey(commandName)] = localCLICommandDetection{
+		found:     found,
+		path:      path,
+		expiresAt: time.Now().Add(localCLICommandDetectionTTL),
+	}
+}
+
+// resetLocalCLICommandCache 供测试清空缓存，避免用例之间互相污染。
+func resetLocalCLICommandCache() {
+	localCLICommandDetectionMu.Lock()
+	defer localCLICommandDetectionMu.Unlock()
+	localCLICommandDetectionCache = map[string]localCLICommandDetection{}
+}
+
 func detectLocalCLICommand(commandName string) (bool, string) {
 	commandName = strings.TrimSpace(commandName)
 	if commandName == "" {
 		return false, ""
 	}
+	if entry, ok := lookupLocalCLICommandCache(commandName); ok {
+		return entry.found, entry.path
+	}
+	found, path := detectLocalCLICommandUncached(commandName)
+	storeLocalCLICommandCache(commandName, found, path)
+	return found, path
+}
+
+func detectLocalCLICommandUncached(commandName string) (bool, string) {
 	resolvedPath, err := localCLICommandPathFunc(commandName)
 	if err == nil && strings.TrimSpace(resolvedPath) != "" {
 		return true, filepath.Clean(strings.TrimSpace(resolvedPath))
@@ -1180,4 +1280,31 @@ func normalizeStringSlice(values []string) []string {
 func isTOMLHeaderLine(line string) bool {
 	line = strings.TrimSpace(line)
 	return strings.HasPrefix(line, "[") && strings.HasSuffix(line, "]")
+}
+
+// prewarmLocalCLICommandCache 在后台预热外部客户端探测结果。
+//
+// 冷路径实测约 1.2s（未安装的命令要把候选 shell 逐个起 login shell 直到超时），
+// 全部发生在设置页打开的同步路径上。启动时先在后台跑一遍，用户真正打开设置页时
+// 命中缓存，代价降到毫秒级。预热失败没有后果——它只是提前填缓存，
+// 真正的探测逻辑与结果判定完全不变。
+func prewarmLocalCLICommandCache() {
+	names := []string{
+		claudeCodeClientCommandName,
+		codexClientCommandName,
+		openCodeClientCommandName,
+		zCodeClientCommandName,
+		kimiCodeClientCommandName,
+		deepSeekHarnessClientCommandName,
+		grokBuildClientCommandName,
+	}
+	var wg sync.WaitGroup
+	for _, name := range names {
+		wg.Add(1)
+		go func(name string) {
+			defer wg.Done()
+			detectLocalCLICommand(name)
+		}(name)
+	}
+	wg.Wait()
 }
