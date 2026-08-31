@@ -1,5 +1,6 @@
 ﻿import Modal from './components/common/ResizableDraggableModal';
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { withAISettingsLeaveGuard, type AISettingsLeaveGuard } from './utils/aiSettingsLeaveGuard';
 import { Layout, Button, ConfigProvider, theme, message, Spin, Slider, Switch, Input, InputNumber, Select, Segmented, Tooltip, Alert } from 'antd';
 import { UploadOutlined, DownloadOutlined, CloudDownloadOutlined, BugOutlined, GlobalOutlined, InfoCircleOutlined, GithubOutlined, SkinOutlined, CheckOutlined, MinusOutlined, BorderOutlined, CloseOutlined, SettingOutlined, LinkOutlined, BgColorsOutlined, AppstoreOutlined, RobotOutlined, FolderOpenOutlined, HddOutlined, SafetyCertificateOutlined, SwitcherOutlined, CodeOutlined, RightOutlined, TableOutlined, MenuOutlined, MenuFoldOutlined, MenuUnfoldOutlined, PoweroffOutlined, TagOutlined, UserOutlined, UpCircleOutlined, MessageOutlined, FileTextOutlined, SyncOutlined, SendOutlined, AuditOutlined } from '@ant-design/icons';
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
@@ -1113,6 +1114,10 @@ function App() {
   const [activeSettingsCenterGroupKey, setActiveSettingsCenterGroupKey] = useState<SettingsCenterGroupKey>('preferences');
   const [activeSettingsCenterPane, setActiveSettingsCenterPane] = useState<SettingsCenterPaneState | null>(null);
   const activeSettingsCenterPaneRef = useRef<SettingsCenterPaneState | null>(null);
+  const aiSettingsLeaveGuardRef = useRef<AISettingsLeaveGuard | null>(null);
+  const registerAISettingsLeaveGuard = useCallback((guard: AISettingsLeaveGuard | null) => {
+      aiSettingsLeaveGuardRef.current = guard;
+  }, []);
   const settingsCenterReturnFocusKeyRef = useRef<SettingsCenterPaneKey | null>(null);
   activeSettingsCenterPaneRef.current = activeSettingsCenterPane;
   const [focusedTabDisplayElementKey, setFocusedTabDisplayElementKey] = useState<TabDisplayElementKey | null>(null);
@@ -1348,14 +1353,16 @@ function App() {
           setIsSecurityUpdateBannerDismissed(false);
       }
       if (options?.openSettings) {
-          if (options.refreshFocus !== false) {
-              setSecurityUpdateSettingsFocusTarget(resolveSecurityUpdateSettingsFocusTarget(nextStatus));
-              setSecurityUpdateSettingsFocusRequest((current) => current + 1);
-          }
-          setToolCenterBackGroupKey('config');
-          setActiveSettingsCenterGroupKey('config');
-          setActiveSettingsCenterPane({ key: 'security-update', group: 'config' });
-          setIsSettingsModalOpen(true);
+          withAISettingsLeaveGuard(aiSettingsLeaveGuardRef.current, () => {
+              if (options.refreshFocus !== false) {
+                  setSecurityUpdateSettingsFocusTarget(resolveSecurityUpdateSettingsFocusTarget(nextStatus));
+                  setSecurityUpdateSettingsFocusRequest((current) => current + 1);
+              }
+              setToolCenterBackGroupKey('config');
+              setActiveSettingsCenterGroupKey('config');
+              setActiveSettingsCenterPane({ key: 'security-update', group: 'config' });
+              setIsSettingsModalOpen(true);
+          });
       }
       return nextStatus;
   }, [normalizeSecurityUpdateStatus]);
@@ -2359,7 +2366,7 @@ function App() {
   );
   const applicationQuitConfirmRef = useRef<{ destroy: () => void } | null>(null);
   const applicationQuitHandlingRef = useRef(false);
-  const openSecurityUpdateSettings = useCallback((focusTarget?: SecurityUpdateSettingsFocusTarget | null) => {
+  const openSecurityUpdateSettings = useCallback((focusTarget?: SecurityUpdateSettingsFocusTarget | null) => withAISettingsLeaveGuard(aiSettingsLeaveGuardRef.current, () => {
       setIsSecurityUpdateIntroOpen(false);
       if (focusTarget !== undefined) {
           setSecurityUpdateSettingsFocusTarget(focusTarget);
@@ -2369,7 +2376,7 @@ function App() {
       setActiveSettingsCenterGroupKey('config');
       setActiveSettingsCenterPane({ key: 'security-update', group: 'config' });
       setIsSettingsModalOpen(true);
-  }, []);
+  }), []);
   const handleOpenSecurityUpdateSettings = useCallback((focusTarget: SecurityUpdateSettingsFocusTarget | null = null) => {
       openSecurityUpdateSettings(focusTarget);
   }, [openSecurityUpdateSettings]);
@@ -2440,10 +2447,7 @@ function App() {
           console.warn('Failed to execute security update round', err);
           setIsSecurityUpdateProgressOpen(false);
           if (detailsWereOpen) {
-              setToolCenterBackGroupKey('config');
-              setActiveSettingsCenterGroupKey('config');
-              setActiveSettingsCenterPane({ key: 'security-update', group: 'config' });
-              setIsSettingsModalOpen(true);
+              openSecurityUpdateSettings();
           }
           void message.error(err?.message || t('app.security_update.message.not_finished_retry_later'));
           return;
@@ -2473,6 +2477,7 @@ function App() {
       activeSettingsCenterPane?.key,
       isSettingsModalOpen,
       normalizeSecurityUpdateStatus,
+      openSecurityUpdateSettings,
       replaceConnections,
       replaceGlobalProxy,
       securityUpdateRawPayload,
@@ -2563,7 +2568,7 @@ function App() {
       securityUpdateStatus.summary,
       t,
   ]);
-  const handleSecurityUpdateIssueAction = useCallback((issue: SecurityUpdateIssue) => {
+  const handleSecurityUpdateIssueAction = useCallback((issue: SecurityUpdateIssue) => withAISettingsLeaveGuard(aiSettingsLeaveGuardRef.current, () => {
       const repairEntry = resolveSecurityUpdateRepairEntry(issue, connections, securityUpdateStatus, t);
       if (repairEntry.type === 'warning') {
           void message.warning(repairEntry.message);
@@ -2596,7 +2601,7 @@ function App() {
       }
       setSecurityUpdateRepairSource(null);
       openSecurityUpdateSettings(repairEntry.focusTarget);
-  }, [connections, openSecurityUpdateSettings, runSecurityUpdateRound, securityUpdateStatus, t]);
+  }), [connections, openSecurityUpdateSettings, runSecurityUpdateRound, securityUpdateStatus, t]);
   const isMacRuntime = runtimePlatform === 'darwin'
       || (runtimePlatform === '' && /mac/i.test(detectNavigatorPlatform()));
   const useNativeMacWindowControls = isMacRuntime;
@@ -2965,6 +2970,11 @@ function App() {
       const runConfirmedAction = async (): Promise<boolean> => {
           let accepted = false;
           try {
+              const leaveGuard = aiSettingsLeaveGuardRef.current;
+              if (leaveGuard && !(await leaveGuard())) {
+                  cancelRequest();
+                  return false;
+              }
               await prepareApplicationQuitPersistence({
                   captureWindowState: () => captureMainWindowStateRef.current(),
                   flushDrafts: flushQueryTabDraftSnapshots,
@@ -3808,25 +3818,25 @@ function App() {
           setSecurityUpdateRepairSource(null);
       }
   }, [closeConnectionPackageDialog]);
-  const handleOpenToolsModal = useCallback((group: ToolCenterGroupKey = 'config') => {
+  const handleOpenToolsModal = useCallback((group: ToolCenterGroupKey = 'config') => withAISettingsLeaveGuard(aiSettingsLeaveGuardRef.current, () => {
       clearSettingsCenterTransientPaneState();
       setToolCenterBackGroupKey(null);
       setActiveSettingsCenterGroupKey(group);
       setActiveSettingsCenterPane(null);
       setIsSettingsModalOpen(true);
-  }, [clearSettingsCenterTransientPaneState]);
-  const handleOpenSettingsModal = useCallback((group: SettingsCenterGroupKey = 'preferences') => {
+  }), [clearSettingsCenterTransientPaneState]);
+  const handleOpenSettingsModal = useCallback((group: SettingsCenterGroupKey = 'preferences') => withAISettingsLeaveGuard(aiSettingsLeaveGuardRef.current, () => {
       clearSettingsCenterTransientPaneState();
       setActiveSettingsCenterGroupKey(group);
       setActiveSettingsCenterPane(resolveSettingsCenterGroupInitialPane(group));
       setIsSettingsModalOpen(true);
-  }, [clearSettingsCenterTransientPaneState]);
-  const handleOpenSettingsCenterPane = useCallback((group: SettingsCenterGroupKey, key: SettingsCenterPaneKey) => {
+  }), [clearSettingsCenterTransientPaneState]);
+  const handleOpenSettingsCenterPane = useCallback((group: SettingsCenterGroupKey, key: SettingsCenterPaneKey) => withAISettingsLeaveGuard(aiSettingsLeaveGuardRef.current, () => {
       clearSettingsCenterTransientPaneState();
       setActiveSettingsCenterGroupKey(group);
       setActiveSettingsCenterPane({ key, group });
       setIsSettingsModalOpen(true);
-  }, [clearSettingsCenterTransientPaneState]);
+  }), [clearSettingsCenterTransientPaneState]);
   const finalizeSecurityRepairReturnFromAISettings = useCallback(() => {
       const reopenSecurityUpdateDetails = shouldReopenSecurityUpdateDetails(securityUpdateRepairSource);
       setFocusedAIProviderId(undefined);
@@ -3835,7 +3845,7 @@ function App() {
           openSecurityUpdateSettings();
       }
   }, [openSecurityUpdateSettings, securityUpdateRepairSource]);
-  const handleBackFromSettingsCenterPane = useCallback(() => {
+  const handleBackFromSettingsCenterPane = useCallback(() => withAISettingsLeaveGuard(aiSettingsLeaveGuardRef.current, () => {
       const leavingAI = activeSettingsCenterPane?.key === 'ai';
       const returnGroup = activeSettingsCenterPane?.group ?? activeSettingsCenterGroupKey;
       settingsCenterReturnFocusKeyRef.current = activeSettingsCenterPane?.key ?? null;
@@ -3844,7 +3854,7 @@ function App() {
       if (leavingAI) {
           finalizeSecurityRepairReturnFromAISettings();
       }
-  }, [
+  }), [
       activeSettingsCenterGroupKey,
       activeSettingsCenterPane?.group,
       activeSettingsCenterPane?.key,
@@ -3861,7 +3871,7 @@ function App() {
       });
       return () => window.cancelAnimationFrame(animationFrame);
   }, [activeSettingsCenterPane, isSettingsModalOpen]);
-  const handleCancelSettingsCenterPane = useCallback(() => {
+  const handleCancelSettingsCenterPane = useCallback(() => withAISettingsLeaveGuard(aiSettingsLeaveGuardRef.current, () => {
       const leavingAI = activeSettingsCenterPane?.key === 'ai';
       if (activeSettingsCenterPane?.key === 'connection-package') {
           closeConnectionPackageDialog();
@@ -3873,11 +3883,11 @@ function App() {
       if (leavingAI) {
           finalizeSecurityRepairReturnFromAISettings();
       }
-  }, [activeSettingsCenterPane?.key, closeConnectionPackageDialog, finalizeSecurityRepairReturnFromAISettings]);
-  const handleOpenDataSyncWorkbench = useCallback((entryMode: DataSyncEntryMode) => {
+  }), [activeSettingsCenterPane?.key, closeConnectionPackageDialog, finalizeSecurityRepairReturnFromAISettings]);
+  const handleOpenDataSyncWorkbench = useCallback((entryMode: DataSyncEntryMode) => withAISettingsLeaveGuard(aiSettingsLeaveGuardRef.current, () => {
       handleCancelSettingsCenterPane();
       addTab(buildDataSyncWorkbenchTab({ entryMode }));
-  }, [addTab, handleCancelSettingsCenterPane]);
+  }), [addTab, handleCancelSettingsCenterPane]);
   const isSettingsAboutPaneOpen = isSettingsModalOpen && activeSettingsCenterPane?.key === 'about-go-navi';
   const isSettingsAboutPaneOpenRef = useRef(false);
   useEffect(() => {
@@ -3889,15 +3899,14 @@ function App() {
               handleOpenSettingsCenterPane('about', 'about-go-navi');
           },
           close: () => {
-              setActiveSettingsCenterPane(null);
-              setIsSettingsModalOpen(false);
+              handleCancelSettingsCenterPane();
           },
           isOpen: () => isSettingsAboutPaneOpenRef.current,
       };
       return () => {
           updateCenterBridgeRef.current = null;
       };
-  }, [handleOpenSettingsCenterPane]);
+  }, [handleCancelSettingsCenterPane, handleOpenSettingsCenterPane]);
   useEffect(() => {
       openReleaseNotesOnManualCheckRef.current = () => {
           setReleaseNotesModalOpen(true);
@@ -3912,19 +3921,19 @@ function App() {
       }
       prepareAboutSurface();
   }, [isSettingsAboutPaneOpen, prepareAboutSurface]);
-  const handleOpenToolCenterPane = useCallback((group: ToolCenterGroupKey, key: ToolCenterPaneKey) => {
+  const handleOpenToolCenterPane = useCallback((group: ToolCenterGroupKey, key: ToolCenterPaneKey) => withAISettingsLeaveGuard(aiSettingsLeaveGuardRef.current, () => {
       clearSettingsCenterTransientPaneState();
       setToolCenterBackGroupKey(group);
       setActiveSettingsCenterGroupKey(group);
       setActiveSettingsCenterPane({ key, group });
       setIsSettingsModalOpen(true);
-  }, [clearSettingsCenterTransientPaneState]);
+  }), [clearSettingsCenterTransientPaneState]);
   /** Title-bar「更多」→ settings/tool center navigation (mirrors 设置 left-nav groups). */
   const handleTitleBarSettingsNavigation = useCallback((spec: {
     group: 'preferences' | 'services' | 'config' | 'workflow' | 'workspace' | 'about';
     pane?: string;
     action?: 'import-connections' | 'export-connections' | 'schema-compare' | 'data-compare' | 'sync' | 'sql-audit';
-  }) => {
+  }) => withAISettingsLeaveGuard(aiSettingsLeaveGuardRef.current, () => {
       if (spec.action === 'import-connections') {
           void handleImportConnections('config');
           return;
@@ -3974,7 +3983,7 @@ function App() {
           return;
       }
       handleOpenSettingsCenterPane(spec.group, spec.pane as SettingsCenterPaneKey);
-  }, [
+  }), [
       addTab,
       handleCancelSettingsCenterPane,
       handleExportConnections,
@@ -3985,14 +3994,14 @@ function App() {
       handleOpenToolCenterPane,
       handleOpenToolsModal,
   ]);
-  const handleReturnToToolCenter = useCallback((closeChild?: () => void) => {
+  const handleReturnToToolCenter = useCallback((closeChild?: () => void) => withAISettingsLeaveGuard(aiSettingsLeaveGuardRef.current, () => {
       const returnGroup = toolCenterBackGroupKey ?? 'config';
       closeChild?.();
       setToolCenterBackGroupKey(null);
       setActiveSettingsCenterGroupKey(returnGroup);
       setActiveSettingsCenterPane(null);
       setIsSettingsModalOpen(true);
-  }, [toolCenterBackGroupKey]);
+  }), [toolCenterBackGroupKey]);
   const sidebarUtilityItems = useMemo(() => {
       const itemMap = {
           settings: {
@@ -4589,13 +4598,13 @@ function App() {
   }, [openSecurityUpdateSettings, securityUpdateRepairSource]);
 
   /** 从聊天面板等入口打开 AI 配置：走设置中心，不再弹独立 AISettingsModal */
-  const handleOpenAISettings = useCallback((providerId?: string) => {
+  const handleOpenAISettings = useCallback((providerId?: string) => withAISettingsLeaveGuard(aiSettingsLeaveGuardRef.current, () => {
       setSecurityUpdateRepairSource(null);
       setFocusedAIProviderId(providerId);
       setActiveSettingsCenterGroupKey('services');
       setActiveSettingsCenterPane({ key: 'ai', group: 'services' });
       setIsSettingsModalOpen(true);
-  }, []);
+  }), []);
 
   const handleAIPanelRenderError = useCallback((error: Error, errorInfo: React.ErrorInfo) => {
       try {
@@ -4809,12 +4818,12 @@ function App() {
   }, [handleOpenToolCenterPane]);
 
   useEffect(() => {
-      const handleOpenTabDisplaySettingsEvent = () => {
+      const handleOpenTabDisplaySettingsEvent = () => withAISettingsLeaveGuard(aiSettingsLeaveGuardRef.current, () => {
           setIsSettingsModalOpen(false);
           setThemeModalSection('workspace');
           setIsThemeModalOpen(true);
           setTabDisplaySettingsFocusRequest((current) => current + 1);
-      };
+      });
       window.addEventListener('gonavi:open-tab-display-settings', handleOpenTabDisplaySettingsEvent as EventListener);
       return () => {
           window.removeEventListener('gonavi:open-tab-display-settings', handleOpenTabDisplaySettingsEvent as EventListener);
@@ -8096,6 +8105,8 @@ function App() {
                         overlayTheme={overlayTheme}
                         focusProviderId={focusedAIProviderId}
                         onBeforeExternalMCPUse={handlePrepareExternalMCPUse}
+                        onLeaveGuardChange={registerAISettingsLeaveGuard}
+                        confirmationZIndex={applicationQuitModalZIndex + 100}
                       />
                     </React.Suspense>
                   </AIPanelErrorBoundary>
@@ -9174,16 +9185,18 @@ function App() {
 
             return (
               <Modal
-                rootClassName="gonavi-settings-center-modal"
+                rootClassName={`gonavi-settings-center-modal${activeSettingsCenterPane?.key === 'ai' ? ' gonavi-provider-settings-host' : ''}`}
                 title={renderUtilityModalTitle(<SettingOutlined />, t('app.settings.title'), t('app.settings.description'))}
                 open={isSettingsModalOpen}
                 onCancel={handleCancelSettingsCenterPane}
                 footer={null}
                 centered
-                width={1080}
+                width={activeSettingsCenterPane?.key === 'ai' ? Math.min(1440, Math.max(360, viewportWidth - 48)) : 1080}
                 zIndex={settingsCenterModalZIndex}
                 styles={{
-                  content: toolCenterModalContentStyle,
+                  content: activeSettingsCenterPane?.key === 'ai'
+                    ? { ...toolCenterModalContentStyle, height: 'min(1000px, calc(100dvh - 32px))' }
+                    : toolCenterModalContentStyle,
                   header: { background: 'transparent', borderBottom: 'none', paddingBottom: 8 },
                   body: { paddingTop: 8, paddingBottom: 8, overflow: 'hidden', flex: 1, minHeight: 0 },
                   footer: { background: 'transparent', borderTop: 'none', paddingTop: 10 },
@@ -9202,6 +9215,7 @@ function App() {
                               id={`gonavi-settings-center-group-tab-${group.key}`}
                               type="button"
                               role="tab"
+                              aria-label={group.title}
                               aria-selected={active}
                               aria-controls={`gonavi-settings-center-group-panel-${group.key}`}
                               tabIndex={active ? 0 : -1}
@@ -9271,6 +9285,7 @@ function App() {
                                     {group.icon}
                                   </span>
                                   <span
+                                    className="gonavi-settings-center-group-label"
                                     style={{
                                       fontSize: 'var(--gn-font-size, 14px)',
                                       fontWeight: active ? 700 : 600,
@@ -9298,7 +9313,7 @@ function App() {
                     >
                       {activeSettingsCenterPane ? (
                         <div style={activeSettingsCenterDetailPanelStyle}>
-                          <div style={{ paddingBottom: 10 }}>
+                          <div className="gonavi-settings-center-pane-heading" style={{ paddingBottom: 10 }}>
                             <div style={{ minWidth: 0 }}>
                               <div style={{ fontSize: 'calc(var(--gn-font-size, 14px) * 1.14)', fontWeight: 700, color: overlayTheme.titleText }}>
                                 {activeSettingsCenterPaneItem?.title ?? activeSettingsCenterGroup.title}

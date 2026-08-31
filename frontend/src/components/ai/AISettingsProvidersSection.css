@@ -1,0 +1,146 @@
+.gonavi-ai-provider-management { display: flex; flex-direction: column; height: 100%; min-height: 0; min-width: 0; color: var(--provider-text); }
+.gonavi-ai-provider-management button { font: inherit; }
+.gonavi-ai-provider-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-shrink: 0; margin-bottom: 14px; }
+.gonavi-ai-provider-heading > div:first-child { display: grid; gap: 3px; min-width: 0; }
+.gonavi-ai-provider-heading strong { font-size: 15px; }
+.gonavi-ai-provider-heading > div > span { color: var(--provider-muted); font-size: 12px; }
+.gonavi-ai-provider-heading .gonavi-ai-provider-add { width: 182px; flex-shrink: 0; }
+.gonavi-ai-provider-list { min-height: 0; max-height: 210px; flex-shrink: 0; display: flex; flex-direction: column; padding-bottom: 12px; border-bottom: 1px solid var(--provider-line); }
+.gonavi-ai-provider-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.gonavi-ai-provider-toolbar > .ant-input-affix-wrapper { flex: 1 1 150px; max-width: 230px; font-size: 12px; }
+.gonavi-ai-provider-collapse, .gonavi-ai-provider-catalog-toggle { padding: 4px 0; background: transparent; border: 0; color: var(--provider-muted); cursor: pointer; display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+.gonavi-ai-provider-collapse small, .gonavi-ai-provider-catalog-toggle small { font-variant-numeric: tabular-nums; }
+.gonavi-ai-provider-collapsed-default { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--provider-muted); }
+.gonavi-ai-provider-density { display: flex; border: 1px solid var(--provider-line); padding: 2px; border-radius: 6px; margin-left: auto; }
+.gonavi-ai-provider-density button { border: 0; border-radius: 4px; padding: 3px 9px; color: var(--provider-muted); background: transparent; cursor: pointer; font-size: 12px; white-space: nowrap; }
+.gonavi-ai-provider-density button[aria-pressed='true'] { color: var(--provider-active); background: var(--provider-active-bg); }
+.gonavi-ai-provider-chips { display: flex; flex-wrap: wrap; gap: 6px; overflow-y: auto; min-height: 0; padding: 2px; scrollbar-width: thin; }
+.gonavi-ai-provider-chips[hidden], .gonavi-ai-provider-catalog[hidden] { display: none !important; }
+.gonavi-ai-provider-chip { display: inline-flex; align-items: center; gap: 2px; border: 1px solid var(--provider-line); border-radius: 7px; min-width: 0; max-width: 100%; }
+.gonavi-ai-provider-chip.is-active { border-color: var(--provider-active); background: var(--provider-active-bg); }
+.gonavi-ai-provider-select { align-self: stretch; min-width: 0; flex: 1; display: flex; align-items: center; gap: 7px; padding: 7px 3px 7px 9px; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
+.gonavi-ai-provider-chip .ant-btn { flex-shrink: 0; color: var(--provider-muted); margin-right: 3px; }
+.gonavi-ai-provider-chip-content { display: flex; min-width: 0; flex-direction: column; gap: 3px; }
+.gonavi-ai-provider-name { min-width: 0; max-width: 190px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; font-size: 12px; }
+.gonavi-ai-provider-radio { width: 14px; height: 14px; display: grid; place-items: center; flex-shrink: 0; border: 1px solid var(--provider-line); border-radius: 50%; font-size: 9px; }
+.is-active .gonavi-ai-provider-radio { color: #fff; background: var(--provider-active); border-color: var(--provider-active); }
+.gonavi-ai-provider-current { font-size: 10px; color: var(--provider-active); white-space: nowrap; }
+[data-density='compact'] .gonavi-ai-provider-current { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+[data-density='normal'] .gonavi-ai-provider-chips { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); }
+[data-density='normal'] .gonavi-ai-provider-select { min-height: 54px; }
+.gonavi-ai-provider-chip-model { font-family: ui-monospace, monospace; font-size: 11px; color: var(--provider-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gonavi-ai-provider-empty { color: var(--provider-muted); font-size: 12px; padding: 6px 0; }
+.gonavi-ai-provider-workspace-toolbar { display: flex; align-items: center; gap: 12px; flex-shrink: 0; padding: 10px 0; }
+.gonavi-ai-provider-workspace-toolbar > span { margin-left: auto; font-size: 11px; color: var(--provider-muted); }
+.gonavi-ai-provider-workspace { display: flex; flex: 1; min-width: 0; min-height: 0; position: relative; isolation: isolate; gap: 0; }
+.gonavi-ai-provider-catalog { flex: 0 0 var(--provider-catalog-width, 336px); width: var(--provider-catalog-width, 336px); min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.gonavi-ai-provider-catalog > .ant-input-affix-wrapper { flex-shrink: 0; margin-bottom: 9px; font-size: 12px; }
+.gonavi-ai-provider-catalog-scroll { overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; flex: 1; min-height: 0; padding: 1px 5px 1px 1px; scrollbar-width: thin; }
+.gonavi-ai-provider-catalog-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 98px), 1fr)); gap: 5px; align-content: start; }
+.gonavi-ai-provider-catalog-entry { position: relative; display: flex; min-width: 0; }
+.gonavi-ai-provider-catalog-entry > .gonavi-ai-provider-catalog-card { width: 100%; }
+.gonavi-ai-provider-catalog-card { display: flex; flex-direction: column; gap: 7px; padding: 10px 8px; min-width: 0; min-height: 88px; border: 1px solid transparent; border-radius: 7px; background: transparent; color: var(--provider-text); text-align: left; cursor: pointer; }
+.gonavi-ai-provider-catalog-card:hover { background: var(--provider-active-bg); }
+.gonavi-ai-provider-catalog-card.is-editing { border-color: var(--provider-line); box-shadow: inset 2px 0 var(--provider-active); background: var(--provider-active-bg); }
+.gonavi-ai-provider-catalog-card:disabled { cursor: wait; opacity: .65; }
+.gonavi-ai-provider-catalog-card > span:last-child { font-weight: 550; font-size: 12px; line-height: 1.45; overflow-wrap: anywhere; }
+.gonavi-ai-provider-catalog-label { padding-right: 20px; }
+.gonavi-ai-provider-visibility { position: absolute; right: 5px; bottom: 7px; display: grid; place-items: center; width: 23px; height: 23px; padding: 0; border: 0; border-radius: 5px; color: var(--provider-muted); background: transparent; cursor: pointer; }
+.gonavi-ai-provider-visibility:hover, .gonavi-ai-provider-visibility:focus-visible { color: var(--provider-active); background: var(--provider-active-bg); }
+.gonavi-ai-provider-hidden { display: flex; flex-direction: column; flex-shrink: 0; min-height: 0; max-height: 50%; margin-top: 8px; border-top: 1px solid var(--provider-line); }
+.gonavi-ai-provider-hidden-toggle { display: flex; align-items: center; flex-shrink: 0; gap: 7px; padding: 11px 4px; width: 100%; border: 0; color: var(--provider-muted); background: transparent; font-size: 12px; text-align: left; cursor: pointer; }
+.gonavi-ai-provider-hidden-toggle small { margin-left: auto; font-variant-numeric: tabular-nums; }
+.gonavi-ai-provider-hidden-list { overflow-y: auto; overscroll-behavior: contain; min-height: 0; scrollbar-width: thin; padding-right: 3px; }
+.gonavi-ai-provider-hidden-hint, .gonavi-ai-provider-catalog-empty { margin: 0 4px 8px; font-size: 11px; color: var(--provider-muted); }
+.gonavi-ai-provider-hidden-row { display: flex; align-items: center; gap: 8px; padding: 5px 4px; min-width: 0; border-radius: 5px; }
+.gonavi-ai-provider-hidden-row > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--provider-text); }
+.gonavi-ai-provider-hidden-row > button { margin-left: auto; flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--provider-line); border-radius: 5px; padding: 4px 6px; color: var(--provider-muted); background: transparent; font-size: 11px; cursor: pointer; }
+.gonavi-ai-provider-hidden-row > button:hover { color: var(--provider-active); background: var(--provider-active-bg); }
+.gonavi-ai-provider-catalog-top { display: flex; align-items: center; justify-content: space-between; gap: 3px; width: 100%; }
+.gonavi-ai-provider-catalog-top small { font-size: 10px; color: var(--provider-muted); white-space: nowrap; }
+.gonavi-ai-provider-icon { flex-shrink: 0; display: inline-grid; place-items: center; width: 29px; height: 29px; border-radius: 7px; background: var(--provider-active-bg); color: var(--provider-active); font-size: 17px; }
+.gonavi-ai-provider-catalog-help { font-size: 10px; color: var(--provider-muted); flex-shrink: 0; padding-top: 7px; }
+.gonavi-ai-provider-resizer { width: 17px; flex: 0 0 17px; cursor: col-resize; touch-action: none; position: relative; display: flex; align-items: center; justify-content: center; outline-offset: -3px; }
+.gonavi-ai-provider-resizer::before { content: ''; position: absolute; top: 0; bottom: 0; left: 8px; width: 1px; background: var(--provider-line); }
+.gonavi-ai-provider-resizer > span { z-index: 1; width: 9px; padding: 4px 0; border: 1px solid var(--provider-line); border-radius: 6px; color: var(--provider-muted); background: var(--provider-bg); font-size: 12px; text-align: center; }
+.gonavi-ai-provider-resizer:hover::before, .is-resizing .gonavi-ai-provider-resizer::before { background: var(--provider-active); }
+.gonavi-ai-provider-workspace.is-resizing { user-select: none; }
+.gonavi-ai-provider-editor { min-width: 0; min-height: 0; flex: 1; display: flex; flex-direction: column; container-type: inline-size; container-name: provider-editor; }
+.gonavi-ai-provider-editor-empty { flex: 1; display: grid; place-items: center; text-align: center; color: var(--provider-muted); font-size: 13px; padding: 30px; }
+.gonavi-ai-provider-editor > .gonavi-ai-provider-form { display: flex; flex-direction: column; min-height: 0; height: 100%; }
+.gonavi-ai-provider-editor-scroll { min-height: 0; flex: 1; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; padding: 1px 5px 12px 1px; scrollbar-width: thin; }
+.gonavi-ai-provider-editor-heading { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+.gonavi-ai-provider-editor-heading > div { display: grid; gap: 2px; min-width: 0; flex: 1; }
+.gonavi-ai-provider-editor-heading strong { font-size: 14px; overflow-wrap: anywhere; }
+.gonavi-ai-provider-editor-heading > div > span { font-size: 11px; color: var(--provider-muted); }
+.gonavi-ai-provider-editor-heading > .ant-btn { flex-shrink: 0; padding-inline: 5px; font-size: 11px; }
+.gonavi-ai-provider-configured-note { padding: 9px 10px; margin-bottom: 13px; font-size: 11px; line-height: 1.55; border: 1px solid var(--provider-line); background: var(--provider-active-bg); border-radius: 6px; color: var(--provider-muted); }
+.gonavi-ai-provider-configured-note .anticon { color: var(--provider-active); }
+.gonavi-ai-provider-editor .gonavi-ai-provider-field-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); gap: 0 12px; }
+.gonavi-ai-provider-editor .gonavi-ai-provider-field-grid > .ant-form-item { margin-bottom: 12px; min-width: 0; }
+.gonavi-ai-provider-editor .ant-form-item-label { padding-bottom: 5px; }
+.gonavi-ai-provider-editor .ant-form-item-label > label { width: 100%; font-size: 12px; }
+.gonavi-ai-provider-editor .ant-input, .gonavi-ai-provider-editor .ant-select, .gonavi-ai-provider-editor .ant-select-selection-placeholder { font-size: 12px; }
+.gonavi-ai-provider-editor .ant-select { width: 100%; }
+.gonavi-ai-provider-editor .ant-form-item-extra { font-size: 11px; }
+.gonavi-ai-provider-model-label { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; }
+.gonavi-ai-provider-model-label button { padding: 1px 0; border: 0; color: var(--provider-active); background: transparent; cursor: pointer; white-space: nowrap; font-size: 10px; }
+.gonavi-ai-provider-model-hint, .gonavi-ai-provider-detail-note { color: var(--provider-muted); font-size: 11px; line-height: 1.6; margin: 0 0 10px; }
+.gonavi-ai-provider-editor details { border-top: 1px solid var(--provider-line); }
+.gonavi-ai-provider-editor summary { padding: 11px 1px; color: var(--provider-muted); cursor: pointer; font-size: 12px; }
+.gonavi-ai-provider-actions { flex-shrink: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; border-top: 1px solid var(--provider-line); padding: 10px 0 2px; margin-top: 0; }
+.gonavi-ai-provider-check-action { display: flex; align-items: center; gap: 8px; }
+.gonavi-ai-provider-check-action small { font-size: 10px; color: var(--provider-muted); }
+.gonavi-ai-provider-save-actions { margin-left: auto; display: flex; flex-direction: column; align-items: stretch; gap: 3px; }
+.gonavi-ai-provider-save-actions > .ant-btn { min-width: 88px; }
+.gonavi-ai-provider-save-actions .ant-btn-text { font-size: 11px; color: var(--provider-muted); height: 23px; }
+.gonavi-ai-provider-test-result { flex: 1 1 120px; min-width: 0; overflow-wrap: anywhere; color: var(--provider-muted); font-size: 11px; }
+.gonavi-ai-provider-test-result .anticon { color: var(--provider-active); }
+.gonavi-ai-provider-test-result[data-error='true'] { color: var(--gn-danger, #cf4343); }
+.is-narrow > .gonavi-ai-provider-catalog { position: absolute; z-index: 3; inset: 0 auto 0 0; width: min(380px, 92%); padding: 10px; background: var(--provider-bg); border: 1px solid var(--provider-line); border-radius: 8px; box-shadow: 6px 0 18px #0002; }
+.gonavi-ai-provider-scrim { position: absolute; z-index: 2; inset: 0; background: #0003; border: 0; }
+.gonavi-ai-provider-management button:focus-visible, .gonavi-ai-provider-resizer:focus-visible { outline: 2px solid var(--provider-active); outline-offset: 2px; }
+.gonavi-provider-settings-host .gonavi-settings-center-pane-heading > div { display: flex; align-items: baseline; flex-wrap: wrap; column-gap: 12px; }
+@media (max-width: 1100px) {
+  .gonavi-provider-settings-host .gonavi-settings-center-layout { grid-template-columns: 60px minmax(0, 1fr) !important; gap: 12px !important; }
+  .gonavi-provider-settings-host .gonavi-settings-center-groups { padding-right: 8px !important; }
+  .gonavi-provider-settings-host .gonavi-settings-center-group-label { display: none; }
+}
+@media (max-height: 800px) {
+  .gonavi-provider-settings-host .gonavi-ai-provider-list { max-height: 112px; }
+  .gonavi-provider-settings-host .gonavi-ai-provider-heading > div > span { display: none; }
+  .gonavi-provider-settings-host .gonavi-settings-center-pane-heading > div > div:last-child { display: none; }
+}
+@container provider-editor (min-width: 510px) {
+  .gonavi-ai-provider-editor .gonavi-ai-provider-basic-fields.has-effort { grid-template-columns: minmax(130px, 1fr) minmax(190px, 1.35fr) minmax(100px, .75fr); }
+}
+@container provider-editor (min-width: 730px) {
+  .gonavi-ai-provider-editor .gonavi-ai-provider-connection-fields { grid-template-columns: minmax(190px, .85fr) minmax(240px, 1.3fr) minmax(180px, 1fr); }
+}
+.gonavi-ai-model-management-popup { max-width: calc(100vw - 24px); }
+.gonavi-ai-model-management { color: inherit; font-size: 12px; }
+.gonavi-ai-model-management button { cursor: pointer; font: inherit; border: 0; background: transparent; color: inherit; }
+.gonavi-ai-model-management-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 7px 9px; }
+.gonavi-ai-model-management-head > div { display: flex; gap: 3px; }
+.gonavi-ai-model-management-head button { border-radius: 5px; padding: 4px 8px; color: var(--gn-fg-3, #61776c); }
+.gonavi-ai-model-management-head button[aria-pressed='true'] { background: var(--gn-bg-hover, #edf7f0); color: var(--gn-primary, #00984a); }
+.gonavi-ai-model-management-head > span { color: var(--gn-fg-3, #61776c); font-size: 10px; white-space: nowrap; }
+.gonavi-ai-model-management > .ant-input { width: calc(100% - 12px); margin: 0 6px 6px; font-size: 12px; }
+.gonavi-ai-model-management-list { max-height: min(240px, calc(100dvh - 250px)); min-height: 45px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.gonavi-ai-model-management-row { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 7px 8px; border-top: 1px solid var(--gn-br-2, #e8eeeb); }
+.gonavi-ai-model-management-name { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.gonavi-ai-model-management-name > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: ui-monospace, monospace; font-size: 11px; }
+.gonavi-ai-model-management-name small { color: var(--gn-primary, #00984a); font-size: 10px; }
+.gonavi-ai-model-management-row.is-disabled .gonavi-ai-model-management-name { opacity: .6; }
+.gonavi-ai-model-management-actions { flex-shrink: 0; display: flex; align-items: center; gap: 5px; }
+.gonavi-ai-model-management-actions button { padding: 3px; font-size: 10px; }
+.gonavi-ai-model-management-actions [role='switch'] { display: inline-flex; align-items: center; gap: 4px; }
+.gonavi-ai-model-switch { display: inline-block; width: 24px; height: 13px; position: relative; border-radius: 20px; background: var(--gn-br-2, #c8d7ce); }
+.gonavi-ai-model-switch::after { content: ''; position: absolute; width: 9px; height: 9px; top: 2px; left: 2px; background: #fff; border-radius: 50%; transition: transform .1s; }
+[aria-checked='true'] > .gonavi-ai-model-switch { background: var(--gn-primary, #00984a); }
+[aria-checked='true'] > .gonavi-ai-model-switch::after { transform: translateX(11px); }
+.gonavi-ai-model-management .gonavi-ai-model-add { padding: 9px; text-align: left; color: var(--gn-primary, #00984a); max-width: 100%; overflow-wrap: anywhere; }
+.gonavi-ai-model-management-foot { border-top: 1px solid var(--gn-br-2, #e8eeeb); padding: 8px; font-size: 10px; line-height: 1.55; color: var(--gn-fg-3, #61776c); }
+.gonavi-ai-model-management-foot [role='status'] { color: var(--gn-primary, #00984a); min-height: 1.55em; }
+.gonavi-ai-model-management button:focus-visible { outline: 2px solid var(--gn-primary, #00984a); outline-offset: 1px; border-radius: 3px; }
+@media (prefers-reduced-motion: reduce) { .gonavi-ai-model-switch::after { transition: none; } }
