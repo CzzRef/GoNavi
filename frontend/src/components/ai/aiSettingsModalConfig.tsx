@@ -20,6 +20,7 @@ import {
   ATLAS_CLOUD_DEFAULT_MODEL,
   DEEPSEEK_DEFAULT_MODEL,
   DEEPSEEK_RESPONSES_BASE_URL,
+  LEGACY_QWEN_BAILIAN_OPENAI_BASE_URL,
   MOONSHOT_ANTHROPIC_BASE_URL,
   MOONSHOT_OPENAI_BASE_URL,
   ORCAROUTER_BASE_URL,
@@ -62,13 +63,18 @@ export const MOONSHOT_ENDPOINTS: ProviderPresetEndpoint[] = [
   { backendType: 'anthropic', baseUrl: MOONSHOT_ANTHROPIC_BASE_URL },
 ];
 
+export const QWEN_BAILIAN_ENDPOINTS: ProviderPresetEndpoint[] = [
+  { backendType: 'anthropic', baseUrl: QWEN_BAILIAN_ANTHROPIC_BASE_URL },
+  { backendType: 'openai', baseUrl: LEGACY_QWEN_BAILIAN_OPENAI_BASE_URL },
+];
+
 export const PROVIDER_PRESETS: ProviderPreset[] = [
   { key: 'openai', label: 'OpenAI', labelKey: 'ai_settings.provider_preset.openai.label', icon: <ApiOutlined />, desc: 'GPT-5.6 series', descKey: 'ai_settings.provider_preset.openai.desc', color: '#10b981', backendType: 'openai', defaultBaseUrl: 'https://api.openai.com/v1', defaultModel: 'gpt-5.6', models: [] },
   { key: 'atlascloud', label: 'Atlas Cloud', labelKey: 'ai_settings.provider_preset.atlascloud.label', icon: <CloudOutlined />, desc: 'Qwen3.8 Max / OpenAI-compatible', descKey: 'ai_settings.provider_preset.atlascloud.desc', color: '#0891b2', backendType: 'openai', defaultBaseUrl: ATLAS_CLOUD_BASE_URL, defaultModel: ATLAS_CLOUD_DEFAULT_MODEL, models: [] },
   { key: 'orcarouter', label: 'OrcaRouter', labelKey: 'ai_settings.provider_preset.orcarouter.label', icon: <CloudOutlined />, desc: 'Smart routing to 200+ models / OpenAI-compatible', descKey: 'ai_settings.provider_preset.orcarouter.desc', color: '#0e7490', backendType: 'openai', defaultBaseUrl: ORCAROUTER_BASE_URL, defaultModel: ORCAROUTER_DEFAULT_MODEL, models: [] },
   { key: 'codex', label: 'Codex Subscription', labelKey: 'ai_settings.provider_preset.codex.label', icon: <ApiOutlined />, desc: 'Local Codex CLI / ChatGPT subscription login', descKey: 'ai_settings.provider_preset.codex.desc', color: '#111827', backendType: 'custom', fixedApiFormat: 'codex-cli', authMode: 'local-cli', defaultBaseUrl: '', defaultModel: '', models: [] },
   { key: 'deepseek', label: 'DeepSeek', labelKey: 'ai_settings.provider_preset.deepseek.label', icon: <ThunderboltOutlined />, desc: 'DeepSeek-V4-Flash / Responses and Chat APIs', descKey: 'ai_settings.provider_preset.deepseek.desc', color: '#3b82f6', backendType: 'openai', defaultApiFormat: 'openai-responses', defaultBaseUrl: DEEPSEEK_RESPONSES_BASE_URL, defaultModel: DEEPSEEK_DEFAULT_MODEL, models: [] },
-  { key: 'qwen-bailian', label: 'Qwen (Bailian General)', labelKey: 'ai_settings.provider_preset.qwen_bailian.label', icon: <CloudOutlined />, desc: 'Bailian Anthropic-compatible endpoint / remote model list', descKey: 'ai_settings.provider_preset.qwen_bailian.desc', color: '#6366f1', backendType: 'anthropic', defaultBaseUrl: QWEN_BAILIAN_ANTHROPIC_BASE_URL, defaultModel: '', models: [] },
+  { key: 'qwen-bailian', label: 'Qwen (Bailian General)', labelKey: 'ai_settings.provider_preset.qwen_bailian.label', icon: <CloudOutlined />, desc: 'Bailian Chat / Anthropic-compatible endpoints', descKey: 'ai_settings.provider_preset.qwen_bailian.desc', color: '#6366f1', backendType: 'anthropic', defaultBaseUrl: QWEN_BAILIAN_ANTHROPIC_BASE_URL, endpoints: QWEN_BAILIAN_ENDPOINTS, defaultModel: '', models: [] },
   { key: 'qwen-coding-plan', label: 'Qwen (Coding Plan)', labelKey: 'ai_settings.provider_preset.qwen_coding_plan.label', icon: <CloudOutlined />, desc: 'Claude Code CLI proxy chain / official supported model list', descKey: 'ai_settings.provider_preset.qwen_coding_plan.desc', color: '#4f46e5', backendType: 'custom', fixedApiFormat: 'claude-cli', defaultBaseUrl: QWEN_CODING_PLAN_ANTHROPIC_BASE_URL, defaultModel: '', models: QWEN_CODING_PLAN_MODELS },
   { key: 'zhipu', label: 'Zhipu GLM', labelKey: 'ai_settings.provider_preset.zhipu.label', icon: <ExperimentOutlined />, desc: 'GLM-5.2 models', descKey: 'ai_settings.provider_preset.zhipu.desc', color: '#0ea5e9', backendType: 'openai', defaultBaseUrl: 'https://open.bigmodel.cn/api/paas/v4', defaultModel: 'glm-5.2', models: [] },
   { key: 'moonshot', label: 'Kimi', labelKey: 'ai_settings.provider_preset.moonshot.label', icon: <ExperimentOutlined />, desc: 'Kimi K3 / OpenAI-compatible', descKey: 'ai_settings.provider_preset.moonshot.desc', color: '#0d9488', backendType: 'openai', defaultBaseUrl: MOONSHOT_OPENAI_BASE_URL, endpoints: MOONSHOT_ENDPOINTS, defaultModel: 'kimi-k3', models: [] },
@@ -94,6 +100,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
   },
   { key: 'codebuddy', label: 'CodeBuddy', labelKey: 'ai_settings.provider_preset.codebuddy.label', icon: <ApiOutlined />, desc: 'Local CodeBuddy CLI / official login session', descKey: 'ai_settings.provider_preset.codebuddy.desc', color: '#2563eb', backendType: 'custom', fixedApiFormat: 'codebuddy-cli', defaultBaseUrl: '', defaultModel: '', models: [] },
   { key: 'cursor', label: 'Cursor', labelKey: 'ai_settings.provider_preset.cursor.label', icon: <ApiOutlined />, desc: 'Cloud Agents API / official API Key', descKey: 'ai_settings.provider_preset.cursor.desc', color: '#7c3aed', backendType: 'custom', fixedApiFormat: 'cursor-agent', defaultBaseUrl: 'https://api.cursor.com/v1', defaultModel: '', models: [] },
+  { key: 'cursor-cli', label: 'Cursor CLI', labelKey: 'ai_settings.provider_preset.cursor_cli.label', icon: <ApiOutlined />, desc: 'Local Cursor CLI / existing sign-in', descKey: 'ai_settings.provider_preset.cursor_cli.desc', color: '#7c3aed', backendType: 'custom', fixedApiFormat: 'cursor-cli', authMode: 'local-cli', defaultBaseUrl: '', defaultModel: '', models: [] },
   { key: 'ollama', label: 'Ollama', labelKey: 'ai_settings.provider_preset.ollama.label', icon: <AppstoreOutlined />, desc: 'Locally deployed open-source models', descKey: 'ai_settings.provider_preset.ollama.desc', color: '#78716c', backendType: 'openai', defaultBaseUrl: 'http://localhost:11434/v1', defaultModel: 'llama3', models: [] },
   { key: 'custom', label: 'Custom', labelKey: 'ai_settings.provider_preset.custom.label', icon: <AppstoreOutlined />, desc: 'Custom API endpoint', descKey: 'ai_settings.provider_preset.custom.desc', color: '#64748b', backendType: 'custom', defaultBaseUrl: '', defaultModel: '', models: [] },
 ];

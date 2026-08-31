@@ -326,6 +326,8 @@ export namespace ai {
 	    model: string;
 	    inlineCompletionModel?: string;
 	    models?: string[];
+	    disabledModels?: string[];
+	    customModels?: string[];
 	    apiFormat?: string;
 	    headers?: Record<string, string>;
 	    maxTokens: number;
@@ -350,6 +352,8 @@ export namespace ai {
 	        this.model = source["model"];
 	        this.inlineCompletionModel = source["inlineCompletionModel"];
 	        this.models = source["models"];
+	        this.disabledModels = source["disabledModels"];
+	        this.customModels = source["customModels"];
 	        this.apiFormat = source["apiFormat"];
 	        this.headers = source["headers"];
 	        this.maxTokens = source["maxTokens"];
@@ -3873,4 +3877,3 @@ export namespace syncjob {
 	
 
 }
-

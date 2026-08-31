@@ -98,21 +98,24 @@ const (
 
 // ProviderConfig AI Provider 配置
 type ProviderConfig struct {
-	ID                    string            `json:"id"`
-	Type                  string            `json:"type"` // openai | anthropic | gemini | custom
-	Name                  string            `json:"name"`
-	AuthMode              string            `json:"authMode,omitempty"` // api-key | local-cli
-	APIKey                string            `json:"apiKey"`
-	SecretRef             string            `json:"secretRef,omitempty"`
-	HasSecret             bool              `json:"hasSecret,omitempty"`
-	BaseURL               string            `json:"baseUrl"`
-	Model                 string            `json:"model"`
-	InlineCompletionModel string            `json:"inlineCompletionModel,omitempty"`
-	Models                []string          `json:"models,omitempty"`
-	APIFormat             string            `json:"apiFormat,omitempty"` // openai | openai-responses | anthropic | gemini | cursor-agent | codex-cli | claude-cli | codebuddy-cli | grok-cli
-	Headers               map[string]string `json:"headers,omitempty"`
-	MaxTokens             int               `json:"maxTokens"`
-	Temperature           float64           `json:"temperature"`
+	ID                    string   `json:"id"`
+	Type                  string   `json:"type"` // openai | anthropic | gemini | custom
+	Name                  string   `json:"name"`
+	AuthMode              string   `json:"authMode,omitempty"` // api-key | local-cli
+	APIKey                string   `json:"apiKey"`
+	SecretRef             string   `json:"secretRef,omitempty"`
+	HasSecret             bool     `json:"hasSecret,omitempty"`
+	BaseURL               string   `json:"baseUrl"`
+	Model                 string   `json:"model"`
+	InlineCompletionModel string   `json:"inlineCompletionModel,omitempty"`
+	Models                []string `json:"models,omitempty"`
+	// Optional model-picker preferences. They do not alter CLI login or account permissions.
+	DisabledModels []string          `json:"disabledModels,omitempty"`
+	CustomModels   []string          `json:"customModels,omitempty"`
+	APIFormat      string            `json:"apiFormat,omitempty"` // openai | openai-responses | anthropic | gemini | cursor-agent | cursor-cli | codex-cli | claude-cli | codebuddy-cli | grok-cli
+	Headers        map[string]string `json:"headers,omitempty"`
+	MaxTokens      int               `json:"maxTokens"`
+	Temperature    float64           `json:"temperature"`
 	// ThinkingIntensity 可选：off/low/medium/high。空值表示沿用供应商默认（多数等价 medium）。
 	ThinkingIntensity string `json:"thinkingIntensity,omitempty"`
 	// Effort 是本机 CLI 供应商的推理档位。它与 ThinkingIntensity 是两条独立的链：

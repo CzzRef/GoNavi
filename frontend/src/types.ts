@@ -732,6 +732,9 @@ export interface AIProviderConfig {
   model: string;
   inlineCompletionModel?: string;
   models?: string[];
+  /** Per-configuration suggestions only; absent fields preserve legacy behavior. */
+  disabledModels?: string[];
+  customModels?: string[];
   apiFormat?: string; // openai 可选 openai-responses；custom 支持 openai/anthropic/gemini/CLI 等格式
   headers?: Record<string, string>;
   maxTokens: number;
