@@ -9,13 +9,13 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"GoNavi-Wails/internal/ai"
+	"GoNavi-Wails/internal/ai/provider"
 )
 
 const (
@@ -503,8 +503,8 @@ func portablePathDir(path string) string {
 
 // localCLICommandDetectionTTL 决定命令存在性探测结果的复用窗口。
 //
-// 未命中缓存时，每个缺失命令都要把所有候选 shell 各起一次 login shell 才能定论，
-// 实测单个命令约 1s（完整 PATH）到 0.5s（极简 PATH 下连找得到的也要走 login shell）。
+// 未命中缓存时，先 LookPath，再读 nvm default（文件系统，毫秒级），Unix 才退到 login shell。
+// 只有 nvm 也没有的命令才要把候选 shell 各起一次，单项约 1s。
 // 设置页一次要探测 7 个客户端，串行叠加就是 2–4.5s 的白屏。
 // 命令是否安装在一次会话里几乎不变，因此按短 TTL 复用；安装 MCP 配置只改配置文件，
 // 不改变命令存在性，所以不需要为安装动作单独失效。
@@ -574,63 +574,16 @@ func detectLocalCLICommand(commandName string) (bool, string) {
 }
 
 func detectLocalCLICommandUncached(commandName string) (bool, string) {
-	resolvedPath, err := localCLICommandPathFunc(commandName)
-	if err == nil && strings.TrimSpace(resolvedPath) != "" {
-		return true, filepath.Clean(strings.TrimSpace(resolvedPath))
-	}
-
-	// GUI launches on Unix commonly omit the user's login-shell PATH. Keep the
-	// normal LookPath result authoritative, then ask a bounded login shell for
-	// an absolute command path before reporting the client as unavailable.
-	if runtime.GOOS == "windows" {
+	resolvedPath, err := provider.LookupLocalCLICommandUsing(provider.CLILookupHooks{
+		LookPath:        localCLICommandPathFunc,
+		ShellCandidates: localCLICommandShellCandidatesFunc,
+		ShellOutput:     localCLICommandShellOutputFunc,
+		Timeout:         localCLICommandShellLookupTimeout,
+	}, commandName)
+	if err != nil || strings.TrimSpace(resolvedPath) == "" {
 		return false, ""
 	}
-	return detectLocalCLICommandFromLoginShell(commandName)
-}
-
-func detectLocalCLICommandFromLoginShell(commandName string) (bool, string) {
-	if !isSafeLocalCLICommandName(commandName) {
-		return false, ""
-	}
-	lookupCommand := "command -v -- " + shellQuoteLocalCLICommand(commandName)
-	ctx, cancel := context.WithTimeout(context.Background(), localCLICommandShellLookupTimeout)
-	defer cancel()
-	for _, shell := range localCLICommandShellCandidatesFunc() {
-		shell = strings.TrimSpace(shell)
-		if shell == "" {
-			continue
-		}
-		if ctx.Err() != nil {
-			break
-		}
-		output, err := localCLICommandShellOutputFunc(ctx, shell, lookupCommand)
-		ctxErr := ctx.Err()
-		if err != nil || ctxErr != nil {
-			continue
-		}
-		for _, line := range strings.Split(string(output), "\n") {
-			candidate := strings.TrimSpace(strings.TrimSuffix(line, "\r"))
-			if !isLocalCLICommandPathCandidate(candidate, commandName) {
-				continue
-			}
-			resolvedPath, err := localCLICommandPathFunc(candidate)
-			resolvedPath = strings.TrimSpace(resolvedPath)
-			if err != nil || !isLocalCLICommandPathCandidate(resolvedPath, commandName) {
-				continue
-			}
-			return true, filepath.Clean(resolvedPath)
-		}
-	}
-	return false, ""
-}
-
-func isLocalCLICommandPathCandidate(candidate string, commandName string) bool {
-	candidate = strings.TrimSpace(candidate)
-	commandName = strings.TrimSpace(commandName)
-	if candidate == "" || commandName == "" || !filepath.IsAbs(candidate) {
-		return false
-	}
-	return portablePathBase(candidate) == commandName
+	return true, filepath.Clean(strings.TrimSpace(resolvedPath))
 }
 
 func runLocalCLICommandShell(ctx context.Context, shell string, lookupCommand string) ([]byte, error) {
@@ -656,26 +609,6 @@ func localCLICommandShellCandidates() []string {
 	appendShell("/bin/bash")
 	appendShell("/bin/sh")
 	return result
-}
-
-func isSafeLocalCLICommandName(commandName string) bool {
-	if commandName == "" {
-		return false
-	}
-	for _, char := range commandName {
-		if (char >= 'a' && char <= 'z') ||
-			(char >= 'A' && char <= 'Z') ||
-			(char >= '0' && char <= '9') ||
-			char == '.' || char == '_' || char == '-' {
-			continue
-		}
-		return false
-	}
-	return true
-}
-
-func shellQuoteLocalCLICommand(value string) string {
-	return "'" + strings.ReplaceAll(value, "'", "'\\''") + "'"
 }
 
 func isLocalMCPClientCommandDetected(commandName string) bool {

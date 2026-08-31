@@ -18,7 +18,7 @@ import (
 	"GoNavi-Wails/internal/logger"
 )
 
-var claudeLookPath = exec.LookPath
+var claudeLookPath = lookupLocalCLICommand
 var claudeCommandContext = exec.CommandContext
 var claudeEvalSymlinks = filepath.EvalSymlinks
 var claudeCLIRequestTimeout = 90 * time.Second
@@ -162,7 +162,7 @@ func CheckClaudeCLILocalAuth(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	cmd.Env = env
+	cmd.Env = EnrichCLICommandPATH(env, command.Path)
 
 	output, commandErr := cmd.Output()
 	if errors.Is(ctx.Err(), context.Canceled) {
@@ -759,7 +759,7 @@ func buildClaudeCLIEnv(config ai.ProviderConfig, baseEnv []string, goos string, 
 	if gitBashPath != "" {
 		env = upsertEnv(env, "CLAUDE_CODE_GIT_BASH_PATH", gitBashPath)
 	}
-	return env, nil
+	return EnrichCLICommandPATH(env, ""), nil
 }
 
 func resolveClaudeCodeGitBashPath(env []string, goos string, lookPath func(string) (string, error), exists func(string) bool) (string, error) {
