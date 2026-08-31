@@ -36,6 +36,8 @@ export function AIGetBuiltinPrompts():Promise<Record<string, string>>;
 
 export function AIGetCLICapabilities():Promise<Array<ai.CLICapabilityView>>;
 
+export function AIGetCLIModelCatalog(arg1:string):Promise<Record<string, any>>;
+
 export function AIGetContextLevel():Promise<string>;
 
 export function AIGetEditableProvider(arg1:string):Promise<ai.ProviderConfig>;

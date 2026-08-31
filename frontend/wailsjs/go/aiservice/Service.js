@@ -70,6 +70,10 @@ export function AIGetCLICapabilities() {
   return window['go']['aiservice']['Service']['AIGetCLICapabilities']();
 }
 
+export function AIGetCLIModelCatalog(arg1) {
+  return window['go']['aiservice']['Service']['AIGetCLIModelCatalog'](arg1);
+}
+
 export function AIGetContextLevel() {
   return window['go']['aiservice']['Service']['AIGetContextLevel']();
 }
