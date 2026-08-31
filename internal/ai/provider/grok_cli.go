@@ -14,7 +14,7 @@ import (
 	"GoNavi-Wails/internal/ai"
 )
 
-var grokLookPath = exec.LookPath
+var grokLookPath = lookupLocalCLICommand
 
 var grokCLIRequestTimeout = 120 * time.Second
 
@@ -67,6 +67,17 @@ func (p *GrokCLIProvider) Name() string {
 
 func (p *GrokCLIProvider) Validate() error {
 	_, err := resolveGrokCLICommand(runtime.GOOS, grokLookPath)
+	return err
+}
+
+// CheckGrokCLIModels checks the CLI model-list command without sending a chat
+// message. A readable list is not proof that the selected model can respond.
+func CheckGrokCLIModels(ctx context.Context) error {
+	capability, ok := LookupCLICapability("grok-cli")
+	if !ok || len(capability.ModelDiscoveryArgs) == 0 {
+		return fmt.Errorf("Grok CLI model-list check is unavailable")
+	}
+	_, err := capability.DiscoverModels(ctx)
 	return err
 }
 
@@ -132,6 +143,7 @@ func (p *GrokCLIProvider) run(ctx context.Context, req ai.ChatRequest) (grokCLIR
 	}
 
 	cmd := exec.CommandContext(ctx, command, args...)
+	cmd.Env = EnrichCLICommandPATH(cmd.Environ(), command)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr

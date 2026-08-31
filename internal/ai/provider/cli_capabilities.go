@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -55,8 +56,10 @@ type CLICapability struct {
 	Command   string
 
 	ModelFlag string
-	// ModelDiscoveryArgs 非空表示该 CLI 能自行枚举模型；为空表示只能预填 + 校验。
+	// ModelDiscoveryArgs 非空表示 CLI 命令可枚举；本机缓存另由 ModelCatalogSource 指定。
 	ModelDiscoveryArgs []string
+	// ModelCatalogSource identifies documented aliases or a local candidate cache.
+	ModelCatalogSource string
 
 	EffortStyle     CLIEffortStyle
 	EffortFlag      string
@@ -83,12 +86,13 @@ type CLICapability struct {
 // 值域或失败语义随上游版本漂移时，必须重新实测后再改本表，不得照抄随附文档。
 var cliCapabilities = map[string]CLICapability{
 	"codex-cli": {
-		APIFormat:       "codex-cli",
-		Command:         "codex",
-		ModelFlag:       "-m",
-		EffortStyle:     CLIEffortConfigKV,
-		EffortConfigKey: "model_reasoning_effort",
-		EffortValues:    []string{"minimal", "low", "medium", "high", "xhigh", "max"},
+		APIFormat:          "codex-cli",
+		Command:            "codex",
+		ModelFlag:          "-m",
+		ModelCatalogSource: "codex-cache",
+		EffortStyle:        CLIEffortConfigKV,
+		EffortConfigKey:    "model_reasoning_effort",
+		EffortValues:       []string{"minimal", "low", "medium", "high", "xhigh", "max"},
 		// codex 在配置加载期不校验该键，非法值不会被立刻拒绝，因此值域取自二进制字符串。
 		EffortValuesVerified: false,
 		Rejection:            CLIRejectHardFailNonZero,
@@ -100,13 +104,14 @@ var cliCapabilities = map[string]CLICapability{
 		APIFormat:            "claude-cli",
 		Command:              "claude",
 		ModelFlag:            "--model",
+		ModelCatalogSource:   "claude-aliases",
 		EffortStyle:          CLIEffortFlag,
 		EffortFlag:           "--effort",
 		EffortValues:         []string{"low", "medium", "high", "xhigh", "max"},
 		EffortValuesVerified: true,
 		Rejection:            CLIRejectSilentDowngrade,
 		RejectionMarkers:     []string{"Unknown --effort value"},
-		// Claude Code 不在用户配置里保存模型或档位，因此没有可预填的来源。
+		// 此适配器尚未读取 Claude 的默认配置；留空时由 CLI 自行解析。
 		ConfigRelPath: nil,
 	},
 	"grok-cli": {
@@ -134,6 +139,16 @@ var cliCapabilities = map[string]CLICapability{
 		ModelFlag:   "--model",
 		EffortStyle: CLIEffortUnsupported,
 		Rejection:   CLIRejectHardFailNonZero,
+	},
+	"cursor-cli": {
+		// Parameters checked against cursor-agent 2026.05.05-84a231c and
+		// official docs on 2026-08-31; model responses remain a manual gate.
+		APIFormat:          "cursor-cli",
+		Command:            "cursor-agent",
+		ModelFlag:          "--model",
+		ModelDiscoveryArgs: []string{"models"},
+		EffortStyle:        CLIEffortUnsupported,
+		Rejection:          CLIRejectHardFailNonZero,
 	},
 }
 
@@ -294,7 +309,7 @@ func splitTOMLScalar(line string) (key string, value string, ok bool) {
 }
 
 // cliCapabilityOrder 固定投影顺序，避免 map 迭代顺序让界面每次刷新都变。
-var cliCapabilityOrder = []string{"codex-cli", "claude-cli", "grok-cli", "codebuddy-cli"}
+var cliCapabilityOrder = []string{"codex-cli", "claude-cli", "grok-cli", "codebuddy-cli", "cursor-cli"}
 
 // CLICapabilityViews 把能力表投影给前端，并顺带带上各 CLI 自身配置里的预填值。
 // 预填读取失败一律降级为空值：它只是省一次手填，绝不能让设置界面打不开。
@@ -324,6 +339,15 @@ func CLICapabilityViews() []ai.CLICapabilityView {
 // modelDiscoveryTimeout 限制枚举调用；枚举失败一律降级为手填，不阻塞设置页。
 var modelDiscoveryTimeout = 15 * time.Second
 
+var cliModelLookPath = lookupLocalCLICommand
+var cliModelCommandOutput = func(ctx context.Context, command string, args ...string) ([]byte, error) {
+	cmd := exec.CommandContext(ctx, command, args...)
+	// A CLI wrapper may leave inherited output pipes open after it is killed.
+	cmd.WaitDelay = time.Second
+	cmd.Env = EnrichCLICommandPATH(cmd.Environ(), command)
+	return cmd.CombinedOutput()
+}
+
 // DiscoverModels 调用该 CLI 自己的模型枚举子命令。
 // 只有声明了 ModelDiscoveryArgs 的 CLI 才可枚举；其余返回空列表而不是错误，
 // 因为「不可枚举」是能力事实，不是故障。
@@ -331,24 +355,43 @@ func (c CLICapability) DiscoverModels(ctx context.Context) ([]string, error) {
 	if len(c.ModelDiscoveryArgs) == 0 {
 		return nil, nil
 	}
+	if c.APIFormat == "cursor-cli" {
+		return discoverCursorCLIModels(ctx)
+	}
 	ctx, cancel := context.WithTimeout(ctx, modelDiscoveryTimeout)
 	defer cancel()
 
-	path, err := exec.LookPath(c.Command)
+	var command string
+	var err error
+	if c.APIFormat == "grok-cli" {
+		command, err = resolveGrokCLICommand(runtime.GOOS, cliModelLookPath)
+	} else {
+		command, err = cliModelLookPath(c.Command)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("%s 未安装或不在 PATH 中", c.Command)
 	}
-	output, runErr := exec.CommandContext(ctx, path, c.ModelDiscoveryArgs...).CombinedOutput()
+	output, runErr := cliModelCommandOutput(ctx, command, c.ModelDiscoveryArgs...)
+	if ctx.Err() != nil {
+		return nil, fmt.Errorf("%s 模型枚举失败：%w", c.Command, ctx.Err())
+	}
 	text := string(output)
 	// 退出码不可信的 CLI 要先看输出：它拒绝时也可能返回 0。
 	if rejection := c.InspectRejection(text); rejection != nil {
 		return nil, rejection
 	}
+	if runErr != nil {
+		return nil, fmt.Errorf("%s 模型枚举失败：%w", c.Command, runErr)
+	}
+	if c.APIFormat == "grok-cli" {
+		for _, marker := range []string{"not logged in", "not authenticated", "please log in", "please login", "grok login", "unauthorized", "authentication required"} {
+			if strings.Contains(strings.ToLower(text), marker) {
+				return nil, fmt.Errorf("Grok CLI is not authenticated; sign in locally before checking models")
+			}
+		}
+	}
 	models := parseCLIModelList(text)
 	if len(models) == 0 {
-		if runErr != nil {
-			return nil, fmt.Errorf("%s 模型枚举失败：%w", c.Command, runErr)
-		}
 		return nil, fmt.Errorf("%s 模型枚举未返回任何模型", c.Command)
 	}
 	return models, nil
@@ -365,7 +408,7 @@ func parseCLIModelList(output string) []string {
 		if line == "" {
 			continue
 		}
-		marker := line[:1]
+		marker := string([]rune(line)[0])
 		if marker != "*" && marker != "-" && marker != "•" {
 			continue
 		}
