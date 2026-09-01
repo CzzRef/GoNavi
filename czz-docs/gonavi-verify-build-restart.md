@@ -103,6 +103,10 @@ ps aux | grep -i "GoNavi-provider-settings" | grep -v grep | awk '{print $2, $11
 
 ## 5. 与 Skill 的关系
 
-这条通路符合 CodeNote 的 `project` 作用域定义（依赖本仓库的路径与构建命令）。要升级成真正的 Skill，前置条件是先把本仓库注册进 CodeNote 的 `vibe/knowledge/workspace-config/workspace.local.json` 的 `repository_bindings`——`init_skill.py --scope project` 会校验这一点，未注册时报 `Project root is not a verified canonical project`。
+这条通路已升级为 `project` 作用域的 Skill：`gonavi-verify-build-restart`。
 
-在完成注册之前，本文件就是这条通路的唯一权威；不要在 `.claude/skills/` 或其他发现目录下另建一份可独立编辑的副本，那会违反 Skill 治理的「单一物理来源」。
+- **唯一物理来源**在 CodeNote 的 `AiRef/VibePractice/Skills/projects/gonavi/gonavi-verify-build-restart/`，由 `init_skill.py --scope project --project-key gonavi` 生成。
+- **发现链接**有两处，都是指向该包的软链而非副本：治理默认面 `.agents/skills/`，本宿主消费面 `.claude/skills/`（Claude Code 不扫 `.agents/skills`）。两个目录均已在 `.gitignore` 中忽略，软链指向用户 Home，不得进版本库。
+- 前置的仓库登记也已完成：`vibe/knowledge/project-index.json` 的 `gonavi` 条目与 `workspace-config/workspace.local.json` 的 `repository_bindings.gonavi`。未登记时 `init_skill.py` 会报 `Project root is not a verified canonical project`。
+
+本文件与该 Skill 是同一份知识的两个投影：Skill 供 Agent 按步执行，本文件供人阅读与评审。**改动时两边同改**，不要只改一边；也不要在其他发现目录下另建可独立编辑的副本，那会违反 Skill 治理的「单一物理来源」。
