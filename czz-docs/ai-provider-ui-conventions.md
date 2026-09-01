@@ -8,6 +8,7 @@
 
 - **不使用原生 `title`。** 系统气泡约一秒才出、指针一移开就消失，且无法配置。需要提示时用 antd `Tooltip`。
 - **进出延迟统一走共享常量**，进场 300ms、离场 150ms，取值锁在 `frontend/src/components/common/tooltipTiming.ts`。antd 默认的 100ms/100ms 会让指针扫过一排按钮时逐个闪烁。
+- **供应商设置页的提示不截鼠标。** 目录卡片、已隐藏行、ⓘ 与模型下拉都用 `passThroughHintTooltip`：离场 0ms，浮层 `pointer-events: none`。指针离开触发源立刻关掉，被浮层挡住的相邻项可以马上换新提示。
 - 仓库里仍有 `0.35 / 0.4 / 0.75` 三处手写延迟（`App.tsx`、`TableOverview.tsx`、`TitleBarQuickActions.tsx`），尚未收敛；新代码不要再新增手写值。
 
 ## B. 提示密度与信息层级
@@ -47,6 +48,7 @@
 - **断点从可用宽度预算推导，不要写死。** 窄屏断点 = 目录最小宽 + 手柄宽 + 编辑区最小宽；写死的数值会让实测 633px 的工作区意外落入抽屉模式。
 - 抽屉态要铺满工作区，否则遮罩会在旁边裸露成灰板；抽屉外壳不透明度不足时，要显式隐藏底层内容，避免文字透出。
 - 工作区之上的都是固定占位，每削减一像素编辑区就多一像素。固定高度的列表区（如已接入列表）用 `min(px, vh)` 而不是纯像素，避免条目变多时挤压编辑区。
+- 顶栏说明与添加框、已接入工具条（密度/搜索）对齐预览稿的水平分组，间距只做小幅回放（约 +4–6px），不要把第十一轮的压缩整段撤掉。
 
 ## H. 命名
 
@@ -66,3 +68,10 @@
 - **不要把样式表当字符串断言。** 读 `.css` 文本去断言 `left: 31px` 这类像素字面量，会因任何一次格式化而误报；它还绕开了仓库 `testPolicy` 守卫（其正则只匹配 `.ts/.tsx`）。要验位置就渲染后断言类名或计算值。
 - **生成文件提 PR 前先用 `git diff -w` 核对真实增量。** `frontend/wailsjs/go/models.ts` 曾出现 694 行改动，其中只有 34 行是内容，其余 660 行是空行风格差异——本机 wails 在空行写 `\t`，上游写空。提交前把「整行仅由空白构成」的行归一化即可消掉，不要动任何有内容的行。不做这一步，review 面会凭空放大二十倍。
 - **DOM 行为抽成纯函数再测。** `react-test-renderer` 没有真实 DOM，滚动、测量类逻辑要抽出可注入容器的纯函数（如 `revealFirstErrorIn`），在单元层覆盖调用形状与边界；纯 CSS 数值不适合写断言，应明确标为待实机确认。
+
+## K. 表单折叠行
+
+- **不要把 `display: flex` 直接打在 `<summary>` 上。** WKWebView（Wails 桌面端）会藏掉原生三角，并且标题和 ⓘ 之间的空白点不着，看起来像“这栏不能收展”。
+- 折叠行用内层满宽 flex 条（`.gonavi-ai-provider-disclosure`）承载标题列、caret 和 ⓘ；`<summary>` 保持块级并关掉 `::marker` / `::-webkit-details-marker`。
+- 箭头复用已接入列表的 `gonavi-ai-provider-caret`（收起 `RightOutlined`，展开 `DownOutlined`），放在标题右侧的共享列里（`.gonavi-ai-provider-disclosure-lead`），不要 `margin-left: auto` 甩到行尾；两行标题列同宽，箭头竖向对齐。整栏包括空白仍是点击面。
+- ⓘ 仍 `stopPropagation`，避免看提示时把栏收展开。

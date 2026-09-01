@@ -2,7 +2,7 @@
 
 本文件只是记录，不随 PR 提交。**czz-docs/ 整个目录永远不进上游 PR**：上游 `Syngnat/GoNavi` 没有这个目录，这里放的是本机工作文档。
 
-刷新于 2026-09-01 13:45。基线为 `upstream/dev` 的 `57658ed1`，本地 `czz-dev` 为 `49d9ed2f`（含 28 个本地独有提交，已推送到 `origin/czz-dev`），`upstream/dev...czz-dev` 计数为 `0 28`，上游无遗留提交未合入。
+刷新于 2026-09-01 21:05。基线为最新 `upstream/dev` 的 `c6fb9251`（已含 [#1131](https://github.com/Syngnat/GoNavi/pull/1131) 与 [#1132](https://github.com/Syngnat/GoNavi/pull/1132)）。本地 `czz-dev` 仍以旧基线 `57658ed1` 为合并点，相对上游 `8 35`：上游多 8 个提交（含 1131 squash 与 1132），本地多 35 个历史提交。下一份 PR 必须从最新 `upstream/dev` 另起压平分支，不能把 `czz-dev` 直接对准 `dev`。
 
 ## 1. 从 104 文件收敛到 72 文件
 
@@ -93,18 +93,13 @@ git commit
 
 ## 7. PR 现状
 
-| PR | 分支 | 状态 | 说明 |
-| --- | --- | --- | --- |
-| [#1130](https://github.com/Syngnat/GoNavi/pull/1130) | `feat/ai-provider-management` | 已关闭 | 首版，72 文件 +9097/−1422。因测试范围需重新界定而关闭 |
-| [#1131](https://github.com/Syngnat/GoNavi/pull/1131) | `feat/ai-provider-management-v2` | 开启中 | 远端为 72 文件 +9087/−1422，`MERGEABLE`。与首版只差 §3.5 里剔掉的那条脆弱用例，−10 行 |
+| PR / 分支 | 状态 | 说明 |
+| --- | --- | --- |
+| [#1130](https://github.com/Syngnat/GoNavi/pull/1130) `feat/ai-provider-management` | 已关闭 | 首版，72 文件 +9097/−1422。因测试范围需重新界定而关闭 |
+| [#1131](https://github.com/Syngnat/GoNavi/pull/1131) `feat/ai-provider-management-v2` | **已合入** `dev` | squash `692e17d7`，merge `d9a081a2`，72 文件 +9087/−1422。与首版只差 §3.5 里剔掉的那条脆弱用例 |
+| `feat/ai-provider-management-v3` | 已推送，未开 PR | 在 v2 上做了 §7.5 的生成文件噪声归一。1131 已合入带空白噪声的 `models.ts`，v3 不再用来替换它 |
 
-| — | `feat/ai-provider-management-v3` | 已推送，未开 PR | 72 文件 **+8757/−1092**。在 v2 基础上做了 §7.5 的生成文件噪声归一，少 660 行空白差异 |
-
-三条分支都保留，不删除也不 force-push。
-
-**为什么 v3 是新分支而不是更新 v2**：PR 跟踪的是 head 分支的引用本身，推 `feat/ai-provider-management-v2` 会立刻改写 #1131 的内容，GitHub 没有「只推分支不动 PR」的开关。为了让 #1131 保持当前状态、同时把优化留在远端，优化落到了新分支 v3；本地 v2 已回退到与 `origin/feat/ai-provider-management-v2` 一致，避免长期分叉。
-
-v3 **暂不开 PR**，留作后续继续优化的基线。要用它替换 #1131 时，只能关掉 #1131 另开——GitHub 不允许更换已开 PR 的 head 分支。
+三条分支都保留，不删除也不 force-push。#1130 的历史与讨论完整可对照。
 
 ## 7.5 生成文件的噪声归一
 
@@ -114,12 +109,42 @@ v3 **暂不开 PR**，留作后续继续优化的基线。要用它替换 #1131 
 
 另两个绑定文件本就无噪声：`Service.d.ts` +6、`Service.js` +12，内容是 `AIGetCLICapabilities` / `AIGetCLIModelCatalog` / `AIListCLIModels` 三个桥接方法。
 
-**注意**：若下次 `wails build` 不带 `-skipbindings` 重新生成绑定，噪声会回流，提 PR 前需重做这一步。
-
-两条分支都保留，不删除也不 force-push：#1130 的历史与讨论完整可对照。
+**注意**：若下次 `wails build` 不带 `-skipbindings` 重新生成绑定，噪声会回流，提 PR 前需重做这一步。#1131 已合入带空白噪声的版本，下一份 PR 不要再带 `models.ts` 除非有真实字段增量。
 
 ## 8. 尚未做的
 
-- `frontend/wailsjs/` 三个生成文件带 −330 行重排，上游通常自行生成，是否包含仍待确认。
-- SQL 例程安全的独立 PR 未建分支。
-- 若上游在评审期间前进，#1131 需按 §2 的步骤重做压平并 force-push，或另起 `-v3`。
+- SQL 例程安全的独立 PR 未建分支，见 §9C。
+- `czz-dev` 尚未合并最新 `upstream/dev`（落后 8 个提交，含 #1131/#1132）。
+- 已隐藏底栏抽屉的 r45 实机观感仍待用户确认。
+
+## 9. #1131 合入后的下一份 PR 候选
+
+相对 squash 头 `692e17d7`（即已合入的 #1131）的工作区增量，去掉 `czz-docs/`、`.codemark/`、`build/evidence/` 后是 37 文件。其中仍须永久排除：
+
+| 排除 | 理由 |
+| --- | --- |
+| `czz-docs/` | 本机工作文档，上游没有该目录 |
+| `.codemark/`、`build/evidence/` | 本机核验产物 |
+| `.gitignore` 的 `.agents/`、`frontend/package.json.md5` | 本机工具噪声 |
+| `frontend/src/types.ts` 的 `"routine"` hunk、SQL 例程 9 文件 | 独立主题，见 §5 / §9C |
+| `AISettingsProvidersSection.test.tsx` 读 CSS 断言 `left: 31px` | #1131 已按 §3.5 剔除，不要回流 |
+
+建议按主题拆成最多三份，都从最新 `upstream/dev`（当前 `c6fb9251`）新建压平分支，不要 `czz-dev` → `dev` 直接开 PR（会把已合入的 squash 再打一遍，并带上 SQL 与本机文档）。
+
+### 9A 设置页跟进（推荐下一份）
+
+折叠栏箭头、顶栏三列、已隐藏底栏可拖高、提示不截鼠标、目录最小宽 168→128。约 15 文件：
+
+- `frontend/src/components/ai/AIProviderModelSelect.tsx` 与对应测试
+- `frontend/src/components/ai/AISettingsProvidersSection.tsx` / `.css` / `mounted.test.tsx`
+- `frontend/src/components/ai/useAIProviderLayout.ts` 与对应测试
+- `frontend/src/components/common/tooltipTiming.ts` 与对应测试
+- `shared/i18n/{zh-CN,zh-TW,en-US,ja-JP,de-DE,ru-RU}.json` 的 `search_short` / `resize_hidden`
+
+### 9B CLI 流式与空闲续命
+
+已提交 `caf98c1c`，8 文件：`cli_idle_watchdog.go` + 测试，以及 `codex_cli` / `cursor_cli` / `grok_cli` 的流式与超时改动。与设置页无编译耦合，可单独开。
+
+### 9C SQL 例程安全
+
+仍是 §5 的独立主题。`SQLOpRoutine` 在任何权限级别下都不放行。不要和 9A/9B 混进同一份 PR。

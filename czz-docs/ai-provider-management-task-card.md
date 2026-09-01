@@ -1,6 +1,6 @@
 # 供应商展示与测试优化
 
-状态：正式页面已落实预览验收后的管理交互和隐藏目录。2026-09-01 第十二轮合并上游 `dev` 并修掉窄屏遮罩、弹窗缩放与高度跳动；第十三轮把编辑页的提示、定位与操作入口整体收敛，并把本轮沉淀的操作与界面规则落成两份正文加一个 project Skill。全量前端 5037 项中 5035 通过，两条失败分别为既有基线与上游自带。用户已在 r18 确认弹窗不再跳动，并在 r29/r30 逐项确认第十三轮的七项实机观感；余下未覆盖的仍是真实模型回复、Windows/Linux 实机与签名发布包。
+状态：正式页面已落实预览验收后的管理交互和隐藏目录。上游 [#1131](https://github.com/Syngnat/GoNavi/pull/1131) 已于 2026-09-01 合入 `dev`。2026-09-01 第十二轮合并上游 `dev` 并修掉窄屏遮罩、弹窗缩放与高度跳动；第十三轮把编辑页的提示、定位与操作入口整体收敛，并把本轮沉淀的操作与界面规则落成两份正文加一个 project Skill。第十四轮补上编辑页折叠栏箭头、顶栏间距、已隐藏底栏抽屉与提示不截鼠标，当前核验包为 r45；独立预览已按正式页当前源码重同步。合入后另有 CLI 流式与空闲续命。全量前端 5037 项中 5035 通过，两条失败分别为既有基线与上游自带。用户已在 r18 确认弹窗不再跳动，并在 r29/r30 逐项确认第十三轮的七项实机观感；余下未覆盖的仍是真实模型回复、Windows/Linux 实机与签名发布包。
 
 工作分支为 `czz-dev`，实施起点为 `4cc7493c`。第十二轮把上游 `Syngnat/GoNavi` 的 `dev`（`89f9ad71`）合并进来，合并基为 `9ef337cd`，合并提交为 `44e5e3e3`；`origin/dev` 未参与。本轮获得重启、Computer Use 核验、优化、提交和推送授权；交付目标是新建 `origin/czz-dev`，不合并或覆盖 `origin/dev`。提交结果以 Git 历史和远端引用为准。
 
@@ -9,10 +9,10 @@
 来源为 CodeNote `claude/gonavi-db-operations-bd76cd` 的 `vibe/specs/260828/0933-db-tool-operations/raw-requirement.md` 及后续确认的供应商管理需求。CodeNote 保留 DB 操作规范与 SRM 试点权威，产品实现和验收记录由本任务维护。
 
 - 保留 AI 分类导航。已接入条目置顶，按原保存顺序排列，支持搜索、换行、一键收展、紧凑/正常密度和悬浮详情；勾选默认项只表示后端已确认的当前供应商。
-- 新增使用可搜索下拉，不再前置选择端点。页内不再重复左侧「模型供应商」标题；说明与添加下拉同一行且左对齐，添加框只比文案略宽。供应商目录可折叠，默认三列，可拖宽、独立滚动并填满可用高度；目录最小宽 168px（原 216px），编辑区最小宽 200px，避免最窄时卡片被拉出空白、对勾贴到分割线。卡片高度随内容，长名称单行省略、悬浮看全文；隐藏按钮紧贴图标右侧，CLI 绿勾紧随其后。查找框与「供应商目录」同一行，收起目录时隐藏。窄窗口改用抽屉，编辑表单随宽度组合字段。设置中心进入 AI 页时保持与其他设置页相同的 1080×820 外壳，不因进入 AI 而自行放大。
+- 新增使用可搜索下拉，不再前置选择端点。页内不再重复左侧「模型供应商」标题；说明与添加下拉同一行且左对齐，添加框只比文案略宽。供应商目录可折叠，默认三列，可拖宽、独立滚动并填满可用高度；目录最小宽 128px（单列卡片；原 216px / 168px），编辑区最小宽 200px，避免最窄时卡片被拉出空白、对勾贴到分割线。卡片高度随内容，长名称单行省略、悬浮看全文；隐藏按钮紧贴图标右侧，CLI 绿勾紧随其后。查找框与「添加模型供应商」同一列宽、左缘对齐（操作列 12em）；已接入搜索同宽右对齐，密度钮贴其左侧。收起目录时隐藏查找框。目录宽度拖动只改样式、松手落盘，避免整页重绘。窄窗口改用抽屉，编辑表单随宽度组合字段。设置中心进入 AI 页时保持与其他设置页相同的 1080×820 外壳，不因进入 AI 而自行放大。
 - 显示名称可选，复用现有 `name`。已配置 CLI 直接编辑和复用本机登录，从新增下拉排除；历史重复配置仍可编辑，不自动删除。普通 API 可多份接入。
-- 目录候选可隐藏到“已隐藏”分组。隐藏后从正常目录和新增下拉排除，分组自动收起；展开后可恢复到原顺序。隐藏不删除配置、不改变默认项、不禁用模型，已接入条目仍可操作。
-- 隐藏分组固定在目录底部，展开后用与上方相同的目录卡片（恢复图标），不再占满一行列表。搜索提示隐藏结果但不自动展开，全部隐藏时仍保留恢复入口。隐藏/恢复不触发保存、删除、检查或默认切换。
+- 目录候选可隐藏到“已隐藏”分组。隐藏后从正常目录和新增下拉排除，不自动收起底栏。展开后可恢复到原顺序。隐藏不删除配置、不改变默认项、不禁用模型，已接入条目仍可操作。
+- 已隐藏是目录底栏抽屉：有隐藏项才出现，收起占一行，展开后列表自滚并封顶。目录卡片区内部滚动、只拖宽，不再用竖向分隔条钉高度。左键点击隐藏项与目录相同：未接入则添加，已接入 CLI 则编辑；眼睛仍只负责恢复显示。搜索提示隐藏结果但不自动展开，全部隐藏时仍保留恢复入口。隐藏/恢复不触发保存、删除、检查或默认切换。
 - 模型、档位保持可见，登录和技术说明折叠；新建或异常时展开。模型候选共用于默认、常用及补全控件，可搜索和手填；目录失败不覆盖原值。
 - 模型下拉区分默认选择和启用管理。停用只过滤本配置的候选，保存后生效；当前默认模型和 SQL 补全模型须先替换才能停用。自定义候选不等于常用模型，不改变账号权限或已有会话执行策略。
 - 普通 API 可“另存为”：复制当前草稿和可保留凭证，生成独立 ID/名称，不复用原密钥引用，不改变原配置或默认项。CLI 保持单例，不支持另存第二份。
@@ -20,7 +20,7 @@
 - 草稿修改后离开需确认；编辑会话、配置版本及请求编号隔离旧结果。修改参数、切换预设、关闭编辑后旧检查不得回写；恢复原值也不会恢复旧检查成功。
 - 供应商独立加载，MCP 客户端探测在进入 MCP 页面后才执行。CLI 默认值由后端提供，仅填入新建且未编辑的字段；切换 CLI 清除旧档位。
 
-布局偏好（含隐藏候选）只存于本机 `gonavi.ai.providers.layout.v1`，不写入供应商配置或凭证；清除该偏好会恢复完整目录，不跨设备同步。独立交互预览及其服务未更新，不用预览结果证明正式产品可用性。
+布局偏好（含隐藏候选）只存于本机 `gonavi.ai.providers.layout.v1`，不写入供应商配置或凭证；清除该偏好会恢复完整目录，不跨设备同步。独立交互预览已按正式页当前源码（核验包 r44）重同步：产品 CSS 整段内联、三框同宽 12em（添加/目录查找左对齐、已接入搜索右对齐）、已隐藏分隔条仅在展开或钉住时出现。仍是模拟数据，不用预览结果证明正式产品可用性。追踪目录仍为 `gonavi-provider-preview-r32`，以免分享短链失效。
 
 不包含自定义分组、批量检查、成本统计、自动故障切换或数据库治理变更。
 
@@ -65,7 +65,15 @@ Grok 未安装、未登录、空输出、零退出拒绝、非零退出和超时
 
 已接入卡片右上角新增删除入口，悬停或聚焦才显形，删除前仍确认，变更在途时禁用，悬停短抖动以区别于相邻的编辑按钮。收展指示由裸字符换成图标并统一进定宽盒子对齐文字。表单行距与固定占位一并压缩，底部测试、结果与保存并到一行，目录底部常驻的拖宽提示与手柄原生 `title` 删除。
 
-本轮把操作口径与界面取舍写成两份规则正文：[gonavi-verify-build-restart.md](gonavi-verify-build-restart.md) 管产物轮次、打包四键与停旧起新；[ai-provider-ui-conventions.md](ai-provider-ui-conventions.md) 管悬浮提示、滚动定位、弹窗几何、破坏性操作、渲染性能、断点与命名等十类约定。前者同时升级为 CodeNote 的 `project` 作用域 Skill `gonavi-verify-build-restart`，文档与 Skill 互为投影，改动时两边同改。
+本轮把操作口径与界面取舍写成两份规则正文：[gonavi-verify-build-restart.md](gonavi-verify-build-restart.md) 管产物轮次、打包四键与停旧起新；[ai-provider-ui-conventions.md](ai-provider-ui-conventions.md) 管悬浮提示、滚动定位、弹窗几何、破坏性操作、渲染性能、断点与命名、表单折叠行等约定。前者同时升级为 CodeNote 的 `project` 作用域 Skill `gonavi-verify-build-restart`，文档与 Skill 互为投影，改动时两边同改。
+
+## 第十四轮折叠栏箭头与顶栏间距
+
+2026-09-01 实机反馈：编辑已接入项时「认证与连接 / 更多设置」没有可见箭头，点标题旁空白也不收展。原因是 WKWebView 给 `<summary>` 设 `display:flex` 会藏掉原生三角，空白 flex 间隙也点不着。改为内层满宽 flex 条 + 行尾 `gonavi-ai-provider-caret`（收起右箭头、展开下箭头），整栏可点；ⓘ 仍 `stopPropagation`。
+
+同轮按 PREVIEW R33 顶栏分组，说明/添加框与目录标题/查找框共用三列网格；当前正式页列间距为 8px，密度/搜索行距小幅回放。r35/r37 为并行会话产物，磁盘镜像未覆盖。当前核验包为 r45。
+
+合入 #1131 之后的代码增量：CLI 流式与空闲续命（`caf98c1c`）让 Grok/Cursor 真流式、Codex 思考过程边扫边推，stdout 重置 3 分钟空闲钟、硬上限 15 分钟；设置页跟进折叠栏箭头、顶栏三列、已隐藏底栏可拖高、提示浮层不截鼠标、目录最小宽 128px。核验停旧起新改为调用 `restart.sh`，只记本机文档。下一份上游 PR 不要从 `czz-dev` 直接开，清单见 [upstream-pr-scope.md](upstream-pr-scope.md) §9。
 
 ## 第十二轮交互与缩放修正
 
@@ -81,7 +89,7 @@ Grok 未安装、未登录、空输出、零退出拒绝、非零退出和超时
 
 保存动作在同一轮合并为下拉按钮：保存是主按钮，另存为收进下拉；单例 CLI 预设直接不渲染下拉，因为它复用同一份本机登录，复制第二份没有意义。原本只在悬浮提示里出现的复制说明改为菜单项内的次级文案。
 
-上游 PR 的范围、排除项、测试口径与拆分障碍单独记在 [upstream-pr-scope.md](upstream-pr-scope.md)。已向 `Syngnat/GoNavi` 的 `dev` 提出 [#1131](https://github.com/Syngnat/GoNavi/pull/1131)（72 文件 +9087/−1422）；首版 [#1130](https://github.com/Syngnat/GoNavi/pull/1130) 因测试范围需重新界定已关闭，两条分支均保留。
+上游 PR 的范围、排除项、测试口径与拆分障碍单独记在 [upstream-pr-scope.md](upstream-pr-scope.md)。[#1131](https://github.com/Syngnat/GoNavi/pull/1131) 已于 2026-09-01 合入 `upstream/dev`（merge `d9a081a2`，squash `692e17d7`，72 文件 +9087/−1422）。首版 [#1130](https://github.com/Syngnat/GoNavi/pull/1130) 已关闭。合入后的增量与下一份 PR 候选见该文件 §9。
 
 本轮沉淀出两份规则正文，改动供应商设置页前应先读：产物轮次、打包四键与停旧起新的操作口径在 [gonavi-verify-build-restart.md](gonavi-verify-build-restart.md)；悬浮提示、滚动定位、弹窗几何、破坏性操作、渲染性能、断点与命名等界面约定在 [ai-provider-ui-conventions.md](ai-provider-ui-conventions.md)。两者均不随上游 PR 提交。
 
@@ -118,18 +126,19 @@ Computer Use 在真实 r9 桌面发现：旧 Claude 配置将一个候选停用�
 | 原生 Computer Use，r9 | 部分通过 | 真实 Wails 页面读到 3 个既有 CLI；Claude 别名列表、模型连续启停、原生 Escape 关闭弹层、真实草稿取消/放弃保护可操作 |
 | 隐藏目录，r9 原生 | 已观察通过的子项 | 隐藏 OpenAI 后目录 21→20，分组默认收起；展开可见恢复入口，重新进入后隐藏保持且收起；既有 3 条配置、原默认项及编辑草稿保持 |
 | 原生补验 | 待解锁 | r10 修正后的启停恢复、恢复显示点击、完整新增去重搜索、拖拽/窄窗口、真实 CLI 检查未完成；没有用其他 UI 通道绕过锁屏 |
-| 构建与重启 | 通过 | 第十二轮至 r19，第十三轮至 r29；均为 Vite 生产包 + `wails build -s -skipbindings -nosyncgomod`，逐轮停旧起新并回读单实例。第十三轮的观感项一项未确认 |
+| 第十四轮定向回归 | 57/57，2 文件 | `AISettingsProvidersSection` 挂载/静态；新增折叠栏整栏切换与行尾 caret。全量 vitest 5 分钟超时未完成；`testPolicy` 两条源码读取仍为既有基线 |
+| 构建与重启 | 通过至 r45 | 第十二轮至 r19，第十三轮至 r29，第十四轮 r45；均为 Vite 生产包 + `wails build -s -skipbindings -nosyncgomod`。r45 回读单实例。已隐藏底栏抽屉待用户实机确认 |
 | 未执行 | 保留 | 真实模型回复、Windows/Linux 实机、冷/热加载测量；没有连接真实数据库 |
 
 本轮 Computer Use 在 r9 暴露问题后，先放弃了测试产生的模型草稿，未保存模型修改；原默认供应商仍为 Claude。OpenAI 的临时隐藏在 r9 测试实例中尚待通过界面恢复，恢复入口已经确认存在。程序重启到 r10 后未能继续读取锁屏后的界面，不推断新实例的偏好状态。
 
 本轮在 r9 快照基础上仅修改草稿比较、两个测试文件及本记录；其他既有源码变更保留。新增源码和待推送祖先提交未检出真实令牌、私钥或新增个人绝对路径；既有模拟路径保留。构建目录、截图、本机证据与独立预览不纳入提交。
 
-当前产物为 `build/bin/GoNavi-provider-settings-260901-r30`，100,298,866 字节，SHA-256 `f1289c37a70a87c26d86f4ff6faef195690240e2d696081976eaeac5560d060b`。原生核验使用独立 `GoNavi-Provider-Verification-r30.app`；未覆盖安装版，也不是签名发布包。r8–r29 及早期产物保留。用户已确认 r30 目录最窄宽度与绿勾位置可用，并已完成第十三轮七项观感的逐项验收。
+当前产物为 `build/bin/GoNavi-provider-settings-260901-r45`，100,331,970 字节，SHA-256 `e414ff5f974d0ceb09556e660049e0ac6a174f71ecb24f9ab026b7ce502da5d5`。原生核验使用独立 `GoNavi-Provider-Verification-r45.app`；未覆盖安装版，也不是签名发布包。r8–r44 及早期产物保留。r45 把已隐藏改成底栏抽屉并去掉分隔条。独立预览 `gonavi-provider-preview-r32` 已同步。
 
 三条核验包边界须记住：第十二轮中途误点应用内更新，r14 核验包被官方 0.9.4 发布包整包替换（独立二进制未受影响）；核验包的 `CFBundleDisplayName` 自 r16 起才随轮次同步，r14/r15 的菜单仍显示 r13，判断运行版本应以进程路径为准；第十三轮有并行会话在同一分支上出包，r29 与 r28 的 SHA-256 完全相同，是同一次构建换标签，轮次号因此并不等于构建次数。
 
-当前核验包为 r30：`GoNavi-Provider-Verification-r30.app` / `GoNavi-provider-settings-260901-r30`，100,298,866 字节，SHA-256 `f1289c37a70a87c26d86f4ff6faef195690240e2d696081976eaeac5560d060b`。菜单名与 Dock 名均为 `GoNavi Provider Verification r30`。
+当前核验包为 r45：`GoNavi-Provider-Verification-r45.app` / `GoNavi-provider-settings-260901-r45`，100,331,970 字节，SHA-256 `e414ff5f974d0ceb09556e660049e0ac6a174f71ecb24f9ab026b7ce502da5d5`。菜单名与 Dock 名均为 `GoNavi Provider Verification r45`。
 
 ## 历史证据与决定
 
@@ -178,17 +187,24 @@ Computer Use 在真实 r9 桌面发现：旧 Claude 配置将一个候选停用�
   "schema": "documentation-sync-group-v1",
   "group_key": "gonavi-ai-provider-management",
   "group_owner": "czz-docs/ai-provider-management-task-card.md",
-  "documents": ["czz-docs/ai-provider-management-task-card.md"],
+  "documents": [
+    "czz-docs/ai-provider-management-task-card.md",
+    "czz-docs/ai-provider-ui-conventions.md",
+    "czz-docs/upstream-pr-scope.md"
+  ],
   "dependencies": [
     "frontend/src/components/AISettingsModal.tsx",
     "frontend/src/components/ai/AISettingsProvidersSection.tsx",
     "frontend/src/components/ai/AISettingsProvidersSection.css",
     "frontend/src/components/ai/AIProviderModelSelect.tsx",
     "frontend/src/components/ai/useAIProviderLayout.ts",
+    "frontend/src/components/common/tooltipTiming.ts",
     "frontend/src/utils/aiProviderManagement.ts",
     "frontend/src/App.tsx",
+    "internal/ai/provider/cli_idle_watchdog.go",
     "internal/ai/provider/cli_lookup.go",
     "internal/ai/provider/cursor_cli.go",
+    "internal/ai/provider/grok_cli.go",
     "internal/ai/provider/cli_model_catalog.go",
     "internal/ai/service/service.go",
     "internal/ai/service/provider_models.go"
@@ -196,13 +212,22 @@ Computer Use 在真实 r9 桌面发现：旧 Claude 配置将一个候选停用�
   "validators": [
     "frontend/src/utils/aiProviderManagement.test.ts",
     "frontend/src/components/AISettingsModal.async.test.tsx",
+    "frontend/src/components/ai/AIProviderModelSelect.test.tsx",
     "frontend/src/components/ai/AISettingsProvidersSection.mounted.test.tsx",
+    "frontend/src/components/ai/useAIProviderLayout.test.ts",
+    "frontend/src/components/common/tooltipTiming.test.ts",
+    "internal/ai/provider/cli_idle_watchdog_test.go",
     "internal/ai/provider/cli_lookup_test.go",
     "internal/ai/provider/cursor_cli_test.go",
     "internal/ai/provider/codebuddy_nvm_test.go",
+    "internal/ai/provider/grok_cli_stream_test.go",
     "internal/ai/service/provider_management_test.go",
     "internal/ai/service/provider_models_test.go"
   ],
-  "git_scope_prefixes": ["czz-docs/ai-provider-management-task-card.md"]
+  "git_scope_prefixes": [
+    "czz-docs/ai-provider-management-task-card.md",
+    "czz-docs/ai-provider-ui-conventions.md",
+    "czz-docs/upstream-pr-scope.md"
+  ]
 }
 ```
