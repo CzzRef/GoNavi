@@ -1,5 +1,56 @@
 import React from 'react';
-import { Input, Select } from 'antd';
+import { Input, Select, Tooltip } from 'antd';
+import { hintTooltipTiming } from '../common/tooltipTiming';
+
+// The management popup reserves this much room for its switchable body from the
+// first open. Both tabs then render inside a box of the same height, so choosing a
+// default or flipping to the manage tab can no longer resize the popup and make it
+// jump against its trigger. This module is the single source: the stylesheet reads
+// it through MODEL_MANAGEMENT_BODY_HEIGHT_VAR rather than repeating the number.
+export const MODEL_MANAGEMENT_BODY_HEIGHT = 280;
+export const MODEL_MANAGEMENT_BODY_HEIGHT_VAR = '--gn-model-management-body-height';
+export const modelManagementBodyStyle = {
+  [MODEL_MANAGEMENT_BODY_HEIGHT_VAR]: `${MODEL_MANAGEMENT_BODY_HEIGHT}px`,
+} as React.CSSProperties;
+
+interface ModelManagementRowProps {
+  value: string;
+  label: string;
+  enabled: boolean;
+  badge: string;
+  /** Empty when the switch is actionable; otherwise the localized blocking reason. */
+  reason: string;
+  stateLabel: string;
+  toggleLabel: string;
+  setDefaultLabel: string;
+  showSetDefault: boolean;
+  onSetDefault: (value: string) => void;
+  onToggle: (value: string, enabled: boolean, reason: string, label: string) => void;
+}
+
+// Memoized so toggling one model re-renders that row alone. Without it every
+// switch click re-rendered the whole popup, which is what made the enable and
+// set-default buttons feel like they lagged the click on large model lists.
+export const ModelManagementRow = React.memo<ModelManagementRowProps>(({
+  value, label, enabled, badge, reason, stateLabel, toggleLabel, setDefaultLabel, showSetDefault, onSetDefault, onToggle,
+}) => <div className={`gonavi-ai-model-management-row${enabled ? '' : ' is-disabled'}`}>
+  <div className="gonavi-ai-model-management-name">
+    <Tooltip title={label} {...hintTooltipTiming}><span>{label}</span></Tooltip>
+    {badge && <small>{badge}</small>}
+  </div>
+  <div className="gonavi-ai-model-management-actions">
+    {showSetDefault && <button type="button" aria-label={`${setDefaultLabel}: ${label}`}
+      onClick={() => onSetDefault(value)}>{setDefaultLabel}</button>}
+    <Tooltip title={reason || undefined} {...hintTooltipTiming}>
+      <button type="button" role="switch" aria-checked={enabled} aria-disabled={Boolean(reason)}
+        aria-label={toggleLabel}
+        onClick={() => onToggle(value, enabled, reason, label)}>
+        <span className="gonavi-ai-model-switch" aria-hidden="true" />{stateLabel}
+      </button>
+    </Tooltip>
+  </div>
+</div>);
+ModelManagementRow.displayName = 'ModelManagementRow';
 
 export interface ModelSelectionManagement {
   disabledModels: string[];
@@ -89,6 +140,18 @@ const AIProviderModelSelect: React.FC<AIProviderModelSelectProps> = ({
     onChange?.(next || '');
     if (mode !== 'manage') close();
   };
+  const toggleModel = (model: string, enabled: boolean, reason: string, label: string) => {
+    if (reason) { setFeedback(reason); return; }
+    management?.onToggle(model, !enabled);
+    setFeedback(management?.copy(enabled ? 'ai_settings.models.disabled' : 'ai_settings.models.enabled', { model: label }) || '');
+  };
+  // Row callbacks must keep a stable identity or React.memo on the row can never
+  // bail out. The ref carries the latest closure without changing that identity.
+  const rowHandlersRef = React.useRef({ choose, toggleModel });
+  rowHandlersRef.current = { choose, toggleModel };
+  const stableSetDefault = React.useCallback((model: string) => rowHandlersRef.current.choose(model), []);
+  const stableToggle = React.useCallback((model: string, enabled: boolean, reason: string, label: string) =>
+    rowHandlersRef.current.toggleModel(model, enabled, reason, label), []);
   const renderManagement = (menu: React.ReactElement) => {
     if (!management) return menu;
     const { copy } = management;
@@ -100,7 +163,7 @@ const AIProviderModelSelect: React.FC<AIProviderModelSelectProps> = ({
       setFeedback(copy('ai_settings.models.added', { model: customValue }));
       setSearch('');
     };
-    return <div ref={managementRef} role="dialog" aria-label={copy('ai_settings.models.actions')} className="gonavi-ai-model-management" onMouseDown={(event) => {
+    return <div ref={managementRef} role="dialog" aria-label={copy('ai_settings.models.actions')} className="gonavi-ai-model-management" style={modelManagementBodyStyle} onMouseDown={(event) => {
       // A switch is an in-place edit. Prevent Select's blur from closing the
       // popup between toggles, while still allowing the search input to focus.
       if ((event.target as HTMLElement).closest('button')) event.preventDefault();
@@ -116,7 +179,7 @@ const AIProviderModelSelect: React.FC<AIProviderModelSelectProps> = ({
         <span>{copy('ai_settings.models.enabled_count', { enabled: enabledCount, total: allCandidates.length })}</span>
         <button type="button" aria-label={copy('common.close')} onClick={() => { close(); selectRef.current?.focus(); }}>×</button>
       </div>
-      {mode === 'select' ? menu : <>
+      <div className="gonavi-ai-model-management-body">{mode === 'select' ? menu : <>
         <Input ref={focusManagementInput} aria-label={copy('ai_settings.models.search')} placeholder={copy('ai_settings.models.search')}
           value={search} maxLength={150} onChange={(event) => setSearch(event.target.value)}
           onKeyDown={(event) => { event.stopPropagation(); if (event.key === 'Enter') { event.preventDefault(); add(); } else if (event.key === 'Escape') { close(); selectRef.current?.focus(); } }} />
@@ -130,26 +193,24 @@ const AIProviderModelSelect: React.FC<AIProviderModelSelectProps> = ({
             const isCompletion = option.value === management.completionModel;
             const reason = isDefault ? 'ai_settings.models.default_required' : isCompletion ? 'ai_settings.models.completion_required'
               : enabledCount <= 1 && enabled && !management.allowDefaultFallback ? 'ai_settings.models.one_required' : '';
-            return <div className={`gonavi-ai-model-management-row${enabled ? '' : ' is-disabled'}`} key={option.value}>
-              <div className="gonavi-ai-model-management-name"><span title={option.label}>{option.label}</span>
-                {(isDefault || isCompletion) && <small>{copy(isDefault ? 'ai_settings.provider.default' : 'ai_settings.form.section.inline_completion')}</small>}
-              </div>
-              <div className="gonavi-ai-model-management-actions">
-                {enabled && !isDefault && <button type="button" aria-label={`${copy('ai_settings.models.set_default')}: ${option.label}`}
-                  onClick={() => choose(option.value)}>{copy('ai_settings.models.set_default')}</button>}
-                <button type="button" role="switch" aria-checked={enabled} aria-disabled={Boolean(reason)}
-                  aria-label={copy('ai_settings.models.enable', { model: option.label })} title={reason ? copy(reason) : undefined}
-                  onClick={() => {
-                    if (reason) { setFeedback(copy(reason)); return; }
-                    management.onToggle(option.value, !enabled);
-                    setFeedback(copy(enabled ? 'ai_settings.models.disabled' : 'ai_settings.models.enabled', { model: option.label }));
-                  }}><span className="gonavi-ai-model-switch" aria-hidden="true" />{copy(enabled ? 'ai_settings.models.on' : 'ai_settings.models.off')}</button>
-              </div>
-            </div>;
+            return <ModelManagementRow
+              key={option.value}
+              value={option.value}
+              label={option.label}
+              enabled={enabled}
+              badge={isDefault || isCompletion ? copy(isDefault ? 'ai_settings.provider.default' : 'ai_settings.form.section.inline_completion') : ''}
+              reason={reason ? copy(reason) : ''}
+              stateLabel={copy(enabled ? 'ai_settings.models.on' : 'ai_settings.models.off')}
+              toggleLabel={copy('ai_settings.models.enable', { model: option.label })}
+              setDefaultLabel={copy('ai_settings.models.set_default')}
+              showSetDefault={enabled && !isDefault}
+              onSetDefault={stableSetDefault}
+              onToggle={stableToggle}
+            />;
           })}
           {canAdd && <button type="button" className="gonavi-ai-model-add" onClick={add}>{copy('ai_settings.models.add', { model: customValue })}</button>}
         </div>
-      </>}
+      </>}</div>
       <div className="gonavi-ai-model-management-foot"><div>{management.source}</div><div>{copy('ai_settings.models.scope')}</div>
         <div role="status" aria-live="polite">{feedback}</div>
       </div>
@@ -184,7 +245,7 @@ const AIProviderModelSelect: React.FC<AIProviderModelSelectProps> = ({
       dropdownRender={management ? renderManagement : undefined}
       popupMatchSelectWidth={management ? 380 : true}
       popupClassName={management ? 'gonavi-ai-model-management-popup' : undefined}
-      listHeight={240}
+      listHeight={management ? MODEL_MANAGEMENT_BODY_HEIGHT : 240}
       placeholder={placeholder}
       loading={loading}
       style={{ width: '100%' }}

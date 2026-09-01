@@ -10,9 +10,12 @@ vi.mock('antd', () => ({
     React.useImperativeHandle(ref, () => ({ input: inputRef.current, focus: () => inputRef.current?.focus() }));
     return <input ref={inputRef} {...props} />;
   }),
+  Tooltip: ({ children }: any) => <>{children}</>,
 }));
-import AIProviderModelSelect from './AIProviderModelSelect';
+import { Tooltip } from 'antd';
+import AIProviderModelSelect, { ModelManagementRow, MODEL_MANAGEMENT_BODY_HEIGHT, MODEL_MANAGEMENT_BODY_HEIGHT_VAR } from './AIProviderModelSelect';
 import { t } from '../../i18n/catalog';
+import { HINT_TOOLTIP_ENTER_DELAY, HINT_TOOLTIP_LEAVE_DELAY } from '../common/tooltipTiming';
 
 describe('searchable model selection', () => {
   let renderer: ReactTestRenderer | undefined;
@@ -84,6 +87,85 @@ describe('searchable model selection', () => {
     expect(toggle('default').props['aria-disabled']).toBe(false);
     await act(async () => renderer!.root.findByProps({ 'aria-label': 'Close' }).props.onClick());
     expect(select().props.open).toBe(false);
+  });
+
+  // Hover hints used to be native `title` attributes: about a second to appear,
+  // gone the instant the pointer moved. These now go through antd Tooltip so the
+  // shared enter/leave timing applies.
+  it('shows model hints through Tooltip with the shared hover timing rather than a native title', async () => {
+    await act(async () => {
+      renderer = create(<AIProviderModelSelect value="default" onChange={vi.fn()}
+        label="Model" placeholder="Choose" customLabel="Use custom:" managementRequest={1}
+        options={['default', 'fast'].map((model) => ({ value: model, label: model }))}
+        management={{ defaultModel: 'default', disabledModels: [], completionModel: '', allowDefaultFallback: false,
+          copy: (key, params) => t('en-US', key, params), source: 'Saved catalog', onToggle: vi.fn(), onAdd: vi.fn() }} />);
+    });
+
+    const tooltips = renderer!.root.findAllByType(Tooltip as never);
+    expect(tooltips.length).toBeGreaterThan(0);
+    tooltips.forEach((tooltip) => {
+      expect(tooltip.props.mouseEnterDelay).toBe(HINT_TOOLTIP_ENTER_DELAY);
+      expect(tooltip.props.mouseLeaveDelay).toBe(HINT_TOOLTIP_LEAVE_DELAY);
+    });
+    expect(renderer!.root.findByProps({ role: 'switch', 'aria-label': 'Enable default' }).props.title).toBeUndefined();
+  });
+
+  // The popup opens above its trigger, so any height change shoves the whole panel
+  // up or down. Both tabs therefore render inside one reserved-height box.
+  it('renders both tabs inside a single reserved-height body so the popup cannot jump', async () => {
+    const Harness: React.FC = () => {
+      const [value, setValue] = React.useState('default');
+      return <AIProviderModelSelect value={value} onChange={setValue}
+        label="Model" placeholder="Choose" customLabel="Use custom:" managementRequest={1}
+        options={['default', 'fast'].map((model) => ({ value: model, label: model }))}
+        management={{ defaultModel: value, disabledModels: [], completionModel: '', allowDefaultFallback: false,
+          copy: (key, params) => t('en-US', key, params), source: 'Saved catalog', onToggle: vi.fn(), onAdd: vi.fn() }} />;
+    };
+    await act(async () => { renderer = create(<Harness />); });
+    const bodies = () => renderer!.root.findAllByProps({ className: 'gonavi-ai-model-management-body' });
+    const inactiveTab = () => renderer!.root.findAll((node) => node.type === 'button' && node.props['aria-pressed'] === false)[0];
+
+    expect(bodies()).toHaveLength(1);
+    expect(renderer!.root.findByType('select').props.listHeight).toBe(MODEL_MANAGEMENT_BODY_HEIGHT);
+    // The stylesheet reads the reserve from this variable, so the number is not duplicated.
+    expect(renderer!.root.findByProps({ role: 'dialog' }).props.style[MODEL_MANAGEMENT_BODY_HEIGHT_VAR])
+      .toBe(`${MODEL_MANAGEMENT_BODY_HEIGHT}px`);
+
+    // Choosing a default rewrites the option list; the body must still be the only box.
+    await act(async () => renderer!.root.findByProps({ 'aria-label': 'Set default: fast' }).props.onClick());
+    expect(bodies()).toHaveLength(1);
+
+    await act(async () => inactiveTab().props.onClick());
+    expect(bodies()).toHaveLength(1);
+    expect(renderer!.root.findByType('select').props.listHeight).toBe(MODEL_MANAGEMENT_BODY_HEIGHT);
+  });
+
+  // React.memo can only skip a row while its callbacks keep the same identity.
+  it('hands memoized rows callbacks that survive a re-render', async () => {
+    const Harness: React.FC = () => {
+      const [disabled, setDisabled] = React.useState<string[]>([]);
+      return <AIProviderModelSelect value="default" onChange={vi.fn()}
+        label="Model" placeholder="Choose" customLabel="Use custom:" managementRequest={1}
+        options={['default', 'fast', 'slow'].map((model) => ({ value: model, label: model }))}
+        management={{ defaultModel: 'default', disabledModels: disabled, completionModel: '', allowDefaultFallback: true,
+          copy: (key, params) => t('en-US', key, params), source: 'Saved catalog',
+          onToggle: (model, enabled) => setDisabled((previous) => enabled ? previous.filter((item) => item !== model) : [...previous, model]),
+          onAdd: vi.fn() }} />;
+    };
+    await act(async () => { renderer = create(<Harness />); });
+    // React collapses memo(fn) into a SimpleMemoComponent whose fiber type is the
+    // inner function, so the tree is searched by that rather than the memo object.
+    const rowType = (ModelManagementRow as unknown as { type: React.ComponentType }).type;
+    const rows = () => renderer!.root.findAllByType(rowType);
+    const before = rows().map((row) => ({ toggle: row.props.onToggle, setDefault: row.props.onSetDefault }));
+    expect(before.length).toBe(3);
+
+    await act(async () => renderer!.root.findByProps({ role: 'switch', 'aria-label': 'Enable fast' }).props.onClick());
+
+    const after = rows().map((row) => ({ toggle: row.props.onToggle, setDefault: row.props.onSetDefault }));
+    expect(after.map((row) => row.toggle)).toEqual(before.map((row) => row.toggle));
+    expect(after.map((row) => row.setDefault)).toEqual(before.map((row) => row.setDefault));
+    expect(renderer!.root.findByProps({ role: 'switch', 'aria-label': 'Enable fast' }).props['aria-checked']).toBe(false);
   });
 
   it('adds custom candidates with Enter without replacing the default or duplicating a disabled name', async () => {

@@ -119,23 +119,32 @@
 }
 .gonavi-ai-model-management-popup { max-width: calc(100vw - 24px); }
 .gonavi-ai-model-management { color: inherit; font-size: 12px; }
-.gonavi-ai-model-management button { cursor: pointer; font: inherit; border: 0; background: transparent; color: inherit; }
+.gonavi-ai-model-management button { cursor: pointer; font: inherit; border: 0; background: transparent; color: inherit; border-radius: 5px; transition: background-color .12s ease, color .12s ease, transform .06s ease; }
+/* Press feedback is local to the button, so a click reads as handled even before the form round-trip re-renders the row. */
+.gonavi-ai-model-management-actions button:hover, .gonavi-ai-model-management .gonavi-ai-model-add:hover { background: var(--gn-bg-hover, #edf7f0); }
+.gonavi-ai-model-management button:active { transform: scale(.96); }
 .gonavi-ai-model-management-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 7px 9px; }
 .gonavi-ai-model-management-head > div { display: flex; gap: 3px; }
 .gonavi-ai-model-management-head button { border-radius: 5px; padding: 4px 8px; color: var(--gn-fg-3, #61776c); }
 .gonavi-ai-model-management-head button[aria-pressed='true'] { background: var(--gn-bg-hover, #edf7f0); color: var(--gn-primary, #00984a); }
 .gonavi-ai-model-management-head > span { color: var(--gn-fg-3, #61776c); font-size: 10px; white-space: nowrap; }
-.gonavi-ai-model-management > .ant-input { width: calc(100% - 12px); margin: 0 6px 6px; font-size: 12px; }
-.gonavi-ai-model-management-list { max-height: min(240px, calc(100dvh - 250px)); min-height: 45px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.gonavi-ai-model-management-body > .ant-input { flex: 0 0 auto; width: calc(100% - 12px); margin: 0 6px 6px; font-size: 12px; }
+/* Reserved from the first open so switching tabs or picking a default cannot
+   change the popup height and shove it against its trigger. The reserve itself
+   is owned by MODEL_MANAGEMENT_BODY_HEIGHT in AIProviderModelSelect.tsx and
+   arrives as --gn-model-management-body-height, so the number lives in one place. */
+.gonavi-ai-model-management-body { display: flex; flex-direction: column; min-height: 0; height: min(var(--gn-model-management-body-height, 280px), calc(100dvh - 250px)); }
+.gonavi-ai-model-management-body > * { min-height: 0; }
+.gonavi-ai-model-management-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
 .gonavi-ai-model-management-row { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 7px 8px; border-top: 1px solid var(--gn-br-2, #e8eeeb); }
 .gonavi-ai-model-management-name { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 3px; }
 .gonavi-ai-model-management-name > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: ui-monospace, monospace; font-size: 11px; }
 .gonavi-ai-model-management-name small { color: var(--gn-primary, #00984a); font-size: 10px; }
 .gonavi-ai-model-management-row.is-disabled .gonavi-ai-model-management-name { opacity: .6; }
 .gonavi-ai-model-management-actions { flex-shrink: 0; display: flex; align-items: center; gap: 5px; }
-.gonavi-ai-model-management-actions button { padding: 3px; font-size: 10px; }
+.gonavi-ai-model-management-actions button { padding: 3px 6px; font-size: 10px; }
 .gonavi-ai-model-management-actions [role='switch'] { display: inline-flex; align-items: center; gap: 4px; }
-.gonavi-ai-model-switch { display: inline-block; width: 24px; height: 13px; position: relative; border-radius: 20px; background: var(--gn-br-2, #c8d7ce); }
+.gonavi-ai-model-switch { display: inline-block; width: 24px; height: 13px; position: relative; border-radius: 20px; background: var(--gn-br-2, #c8d7ce); transition: background-color .12s ease; }
 .gonavi-ai-model-switch::after { content: ''; position: absolute; width: 9px; height: 9px; top: 2px; left: 2px; background: #fff; border-radius: 50%; transition: transform .1s; }
 [aria-checked='true'] > .gonavi-ai-model-switch { background: var(--gn-primary, #00984a); }
 [aria-checked='true'] > .gonavi-ai-model-switch::after { transform: translateX(11px); }
@@ -143,4 +152,7 @@
 .gonavi-ai-model-management-foot { border-top: 1px solid var(--gn-br-2, #e8eeeb); padding: 8px; font-size: 10px; line-height: 1.55; color: var(--gn-fg-3, #61776c); }
 .gonavi-ai-model-management-foot [role='status'] { color: var(--gn-primary, #00984a); min-height: 1.55em; }
 .gonavi-ai-model-management button:focus-visible { outline: 2px solid var(--gn-primary, #00984a); outline-offset: 1px; border-radius: 3px; }
-@media (prefers-reduced-motion: reduce) { .gonavi-ai-model-switch::after { transition: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .gonavi-ai-model-switch, .gonavi-ai-model-switch::after, .gonavi-ai-model-management button { transition: none; }
+  .gonavi-ai-model-management button:active { transform: none; }
+}
