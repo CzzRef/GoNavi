@@ -96,7 +96,19 @@ git commit
 | PR | 分支 | 状态 | 说明 |
 | --- | --- | --- | --- |
 | [#1130](https://github.com/Syngnat/GoNavi/pull/1130) | `feat/ai-provider-management` | 已关闭 | 首版，72 文件 +9097/−1422。因测试范围需重新界定而关闭 |
-| [#1131](https://github.com/Syngnat/GoNavi/pull/1131) | `feat/ai-provider-management-v2` | 开启中 | 72 文件 +9087/−1422，`MERGEABLE`。与首版只差 §3.5 里剔掉的那条脆弱用例，−10 行 |
+| [#1131](https://github.com/Syngnat/GoNavi/pull/1131) | `feat/ai-provider-management-v2` | 开启中 | 远端为 72 文件 +9087/−1422，`MERGEABLE`。与首版只差 §3.5 里剔掉的那条脆弱用例，−10 行 |
+
+本地 `feat/ai-provider-management-v2` 已再做一次生成文件的噪声归一（见 §7.5），体量降到 **72 文件 +8757/−1092**，但**尚未推送**：该分支是 #1131 的 head，任何推送都会直接改写这个 PR 的内容，没有「只推分支不动 PR」的选项。因为要维持单个压平提交，更新方式只能是 `--amend` 后 force-push。
+
+## 7.5 生成文件的噪声归一
+
+`frontend/wailsjs/go/models.ts` 相对上游有 694 行改动，`git diff -w` 实测**真实内容只有 34 行**（`CLICapabilityView` 类与 `disabledModels` / `customModels` 字段）。其余 660 行是空行风格差异：本机 wails 在空行写 `\t`，上游写空。
+
+处理方式是只把「整行仅由空白构成」的行归一化，不动任何有内容的行；归一后 `npx tsc --noEmit`、`npx vitest run`（5034/5036）与 `npm run build` 均通过。
+
+另两个绑定文件本就无噪声：`Service.d.ts` +6、`Service.js` +12，内容是 `AIGetCLICapabilities` / `AIGetCLIModelCatalog` / `AIListCLIModels` 三个桥接方法。
+
+**注意**：若下次 `wails build` 不带 `-skipbindings` 重新生成绑定，噪声会回流，提 PR 前需重做这一步。
 
 两条分支都保留，不删除也不 force-push：#1130 的历史与讨论完整可对照。
 
