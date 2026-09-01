@@ -25,6 +25,7 @@ optional-driver-agent
 optional-driver-agent.exe
 .ace-tool/
 .superpowers/
+.agents/
 .claude/
 .gemini/
 .playwright-mcp/
