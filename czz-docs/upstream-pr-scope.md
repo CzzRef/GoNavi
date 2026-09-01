@@ -98,7 +98,13 @@ git commit
 | [#1130](https://github.com/Syngnat/GoNavi/pull/1130) | `feat/ai-provider-management` | 已关闭 | 首版，72 文件 +9097/−1422。因测试范围需重新界定而关闭 |
 | [#1131](https://github.com/Syngnat/GoNavi/pull/1131) | `feat/ai-provider-management-v2` | 开启中 | 远端为 72 文件 +9087/−1422，`MERGEABLE`。与首版只差 §3.5 里剔掉的那条脆弱用例，−10 行 |
 
-本地 `feat/ai-provider-management-v2` 已再做一次生成文件的噪声归一（见 §7.5），体量降到 **72 文件 +8757/−1092**，但**尚未推送**：该分支是 #1131 的 head，任何推送都会直接改写这个 PR 的内容，没有「只推分支不动 PR」的选项。因为要维持单个压平提交，更新方式只能是 `--amend` 后 force-push。
+| — | `feat/ai-provider-management-v3` | 已推送，未开 PR | 72 文件 **+8757/−1092**。在 v2 基础上做了 §7.5 的生成文件噪声归一，少 660 行空白差异 |
+
+三条分支都保留，不删除也不 force-push。
+
+**为什么 v3 是新分支而不是更新 v2**：PR 跟踪的是 head 分支的引用本身，推 `feat/ai-provider-management-v2` 会立刻改写 #1131 的内容，GitHub 没有「只推分支不动 PR」的开关。为了让 #1131 保持当前状态、同时把优化留在远端，优化落到了新分支 v3；本地 v2 已回退到与 `origin/feat/ai-provider-management-v2` 一致，避免长期分叉。
+
+v3 **暂不开 PR**，留作后续继续优化的基线。要用它替换 #1131 时，只能关掉 #1131 另开——GitHub 不允许更换已开 PR 的 head 分支。
 
 ## 7.5 生成文件的噪声归一
 
