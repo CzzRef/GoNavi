@@ -1,4 +1,4 @@
-﻿import Modal from './components/common/ResizableDraggableModal';
+import Modal from './components/common/ResizableDraggableModal';
 import React, { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef } from 'react';
 import { withAISettingsLeaveGuard, type AISettingsLeaveGuard } from './utils/aiSettingsLeaveGuard';
 import { Layout, Button, ConfigProvider, theme, message, notification, Spin, Slider, Switch, Input, InputNumber, Select, Segmented, Tooltip, Alert } from 'antd';
@@ -9415,12 +9415,10 @@ function App() {
                 onCancel={handleCancelSettingsCenterPane}
                 footer={null}
                 centered
-                width={activeSettingsCenterPane?.key === 'ai' ? Math.min(1440, Math.max(360, viewportWidth - 48)) : 1080}
+                width={1080}
                 zIndex={settingsCenterModalZIndex}
                 styles={{
-                  content: activeSettingsCenterPane?.key === 'ai'
-                    ? { ...toolCenterModalContentStyle, height: 'min(1000px, calc(100dvh - 32px))' }
-                    : toolCenterModalContentStyle,
+                  content: toolCenterModalContentStyle,
                   header: { background: 'transparent', borderBottom: 'none', paddingBottom: 8 },
                   body: { paddingTop: 8, paddingBottom: 8, overflow: 'hidden', flex: 1, minHeight: 0 },
                   footer: { background: 'transparent', borderTop: 'none', paddingTop: 10 },

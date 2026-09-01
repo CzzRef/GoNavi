@@ -6,7 +6,8 @@ import type { FormInstance } from 'antd/es/form';
 import type { AIProviderConfig } from '../../types';
 import { buildProviderModelOptions, filterProviders, parseCLIModelCatalog, type CLIModelCatalog, type ProviderCheckResult } from '../../utils/aiProviderManagement';
 import AIProviderModelSelect from './AIProviderModelSelect';
-import { useAIProviderLayout } from './useAIProviderLayout';
+import { hintTooltipTiming } from '../common/tooltipTiming';
+import { useAIProviderLayout, workspaceClassName } from './useAIProviderLayout';
 import './AISettingsProvidersSection.css';
 import { getProviderEndpointType, getProviderEndpointTypes, type ProviderEndpointType } from '../../utils/aiProviderEndpoints';
 import { t as catalogTranslate } from '../../i18n/catalog';
@@ -300,10 +301,32 @@ const AISettingsProvidersSection: React.FC<AISettingsProvidersSectionProps> = ({
   } as React.CSSProperties;
   const requiredModelRule = { validator: (_: unknown, value: string) => disabledModels.has(value)
     ? Promise.reject(new Error(copy('ai_settings.models.default_required'))) : Promise.resolve() };
+  const catalogEntry = (preset: AISettingsProviderPresetOption) => {
+    const configured = providersByPreset.get(preset.key) || [];
+    const connectedCLI = Boolean(presetCLIIdentity(preset) && configured.length);
+    const selected = isEditing && preset.key === presetKeyFromForm;
+    return <div className="gonavi-ai-provider-catalog-entry" key={preset.key}>
+      <Tooltip {...hintTooltipTiming} title={<div>{preset.desc}<div>{getProviderEndpointTypes(preset).map(endpointLabel).join(' · ')}</div>
+      {connectedCLI && <div>{copy('ai_settings.provider.local_cli_reuse')}</div>}</div>} trigger={['hover', 'focus']}>
+      <button type="button" className={`gonavi-ai-provider-catalog-card${selected ? ' is-editing' : ''}`} aria-pressed={selected}
+        aria-label={`${preset.label}${connectedCLI ? ` · ${copy('ai_settings.provider.configured')}` : ''}`}
+        disabled={providersLoading || Boolean(loadError) || loading} onClick={() => chooseCatalogPreset(preset.key)}>
+        <span className="gonavi-ai-provider-catalog-top"><span className="gonavi-ai-provider-icon" aria-hidden="true">{preset.icon}</span>
+          {configured.length > 0 && <small>{connectedCLI ? copy('ai_settings.provider.configured') : copy('ai_settings.provider.config_count', { count: configured.length })}</small>}
+        </span><span className="gonavi-ai-provider-catalog-label">{preset.label}</span>
+      </button>
+      </Tooltip>
+      <Tooltip {...hintTooltipTiming} title={copy('ai_settings.provider.hide')}>
+        <button type="button" className="gonavi-ai-provider-visibility" aria-label={`${copy('ai_settings.provider.hide')}: ${preset.label}`}
+          ref={(node) => { if (node) visibilityButtons.current.set(`visible:${preset.key}`, node); else visibilityButtons.current.delete(`visible:${preset.key}`); }}
+          onClick={() => hidePreset(preset.key)}><EyeInvisibleOutlined /></button>
+      </Tooltip>
+    </div>;
+  };
 
   return <div className="gonavi-ai-provider-management" style={rootStyle}>
     <div className="gonavi-ai-provider-heading">
-      <div><strong>{copy('ai_settings.nav.providers.title')}</strong><span>{copy('ai_settings.nav.providers.description')}</span></div>
+      <span className="gonavi-ai-provider-heading-copy">{copy('ai_settings.nav.providers.description')}</span>
       <Select className="gonavi-ai-provider-add gonavi-ai-provider-add-preset-select" showSearch
         aria-label={copy('ai_settings.provider.action.add')} value={undefined}
         placeholder={<span><PlusOutlined /> {copy('ai_settings.provider.action.add')}</span>}
@@ -348,7 +371,7 @@ const AISettingsProvidersSection: React.FC<AISettingsProvidersSectionProps> = ({
             {Boolean(provider.disabledModels?.length) && <div>{copy('ai_settings.models.disabled_count', { count: provider.disabledModels!.length })}</div>}
           </div>;
           return <div className={`gonavi-ai-provider-row gonavi-ai-provider-chip${isActive ? ' is-active' : ''}`} key={provider.id}>
-            <Tooltip title={tooltip} trigger={['hover', 'focus']}>
+            <Tooltip {...hintTooltipTiming} title={tooltip} trigger={['hover', 'focus']}>
               <button className="gonavi-ai-provider-select" type="button" role="radio" aria-checked={isActive}
                 aria-label={`${copy('ai_settings.provider.set_default')}: ${name}`} aria-busy={isPending}
                 tabIndex={isActive || (!visibleProviders.some((item) => item.id === activeProviderId) && index === 0) ? 0 : -1}
@@ -368,7 +391,7 @@ const AISettingsProvidersSection: React.FC<AISettingsProvidersSectionProps> = ({
                 {isActive && <span className="gonavi-ai-provider-current">{copy('ai_settings.provider.default')}</span>}
               </button>
             </Tooltip>
-            <Tooltip title={copy('ai_settings.provider.action.edit')}><Button type="text" size="small" icon={<EditOutlined />}
+            <Tooltip {...hintTooltipTiming} title={copy('ai_settings.provider.action.edit')}><Button type="text" size="small" icon={<EditOutlined />}
               aria-label={`${copy('ai_settings.provider.action.edit')}: ${name}`} onClick={() => onEditProvider(provider)} /></Tooltip>
           </div>;
         })}
@@ -379,60 +402,47 @@ const AISettingsProvidersSection: React.FC<AISettingsProvidersSectionProps> = ({
         aria-controls="gonavi-ai-provider-catalog" onClick={layout.toggleCatalog}>
         <span aria-hidden="true">{layout.catalogVisible ? '‹' : '›'}</span> {copy('ai_settings.provider.catalog')} <small>{displayedPresets.length}</small>
       </button>
+      {layout.catalogVisible && <Input className="gonavi-ai-provider-catalog-search" prefix={<SearchOutlined />} allowClear value={catalogSearch}
+        onChange={(event) => setCatalogSearch(event.target.value)}
+        placeholder={copy('ai_settings.provider.catalog_search')} aria-label={copy('ai_settings.provider.catalog_search')} />}
       <span>{copy('ai_settings.provider.catalog_hint')}</span>
     </div>
-    <div ref={layout.workspaceRef} className={`gonavi-ai-provider-workspace${layout.narrow ? ' is-narrow' : ''}${layout.dragging ? ' is-resizing' : ''}`}
+    <div ref={layout.workspaceRef} className={workspaceClassName(layout.narrow, layout.catalogVisible, layout.dragging)}
       onKeyDown={(event) => { if (event.key === 'Escape' && layout.narrow && layout.catalogVisible) { event.stopPropagation(); layout.closeDrawer(); catalogToggleRef.current?.focus(); } }}>
       {layout.narrow && layout.catalogVisible && <button className="gonavi-ai-provider-scrim" type="button" aria-label={copy('ai_settings.provider.close_catalog')}
         onClick={() => { layout.closeDrawer(); catalogToggleRef.current?.focus(); }} />}
       <aside id="gonavi-ai-provider-catalog" className="gonavi-ai-provider-catalog" hidden={!layout.catalogVisible} aria-label={copy('ai_settings.provider.catalog')}>
-        <Input prefix={<SearchOutlined />} allowClear value={catalogSearch} onChange={(event) => setCatalogSearch(event.target.value)}
-          placeholder={copy('ai_settings.provider.catalog_search')} aria-label={copy('ai_settings.provider.catalog_search')} />
         <div className="gonavi-ai-provider-catalog-scroll"><div className="gonavi-ai-provider-catalog-grid">
-          {visiblePresets.map((preset) => {
-            const configured = providersByPreset.get(preset.key) || [];
-            const connectedCLI = Boolean(presetCLIIdentity(preset) && configured.length);
-            const selected = isEditing && preset.key === presetKeyFromForm;
-            return <div className="gonavi-ai-provider-catalog-entry" key={preset.key}>
-              <Tooltip title={<div>{preset.desc}<div>{getProviderEndpointTypes(preset).map(endpointLabel).join(' · ')}</div>
-              {connectedCLI && <div>{copy('ai_settings.provider.local_cli_reuse')}</div>}</div>} trigger={['hover', 'focus']}>
-              <button type="button" className={`gonavi-ai-provider-catalog-card${selected ? ' is-editing' : ''}`} aria-pressed={selected}
-                aria-label={`${preset.label}${connectedCLI ? ` · ${copy('ai_settings.provider.configured')}` : ''}`}
-                disabled={providersLoading || Boolean(loadError) || loading} onClick={() => chooseCatalogPreset(preset.key)}>
-                <span className="gonavi-ai-provider-catalog-top"><span className="gonavi-ai-provider-icon" aria-hidden="true">{preset.icon}</span>
-                  {configured.length > 0 && <small>{connectedCLI ? copy('ai_settings.provider.configured') : copy('ai_settings.provider.config_count', { count: configured.length })}</small>}
-                </span><span className="gonavi-ai-provider-catalog-label">{preset.label}</span>
-              </button>
-              </Tooltip>
-              <Tooltip title={copy('ai_settings.provider.hide')}>
-                <button type="button" className="gonavi-ai-provider-visibility" aria-label={`${copy('ai_settings.provider.hide')}: ${preset.label}`}
-                  ref={(node) => { if (node) visibilityButtons.current.set(`visible:${preset.key}`, node); else visibilityButtons.current.delete(`visible:${preset.key}`); }}
-                  onClick={() => hidePreset(preset.key)}><EyeInvisibleOutlined /></button>
-              </Tooltip>
-            </div>;
-          })}
+          {visiblePresets.map((preset) => catalogEntry(preset))}
         </div>{!visiblePresets.length && <div className="gonavi-ai-provider-catalog-empty" role="status">{copy(
           matchingHiddenPresets.length ? 'ai_settings.provider.hidden_matches' : 'ai_settings.provider.no_matches',
           { count: matchingHiddenPresets.length })}</div>}
         </div>
+        <div className="gonavi-ai-provider-catalog-footer">
           {hiddenPresets.length > 0 && <section className="gonavi-ai-provider-hidden">
             <button type="button" ref={hiddenToggleRef} className="gonavi-ai-provider-hidden-toggle" aria-expanded={hiddenExpanded}
-              aria-controls="gonavi-ai-provider-hidden-list" onClick={() => setHiddenExpanded((expanded) => !expanded)}>
+              aria-controls="gonavi-ai-provider-hidden-list" title={copy('ai_settings.provider.hidden_hint')}
+              onClick={() => setHiddenExpanded((expanded) => !expanded)}>
               <span aria-hidden="true">{hiddenExpanded ? '⌄' : '›'}</span><EyeInvisibleOutlined aria-hidden="true" />
               {copy('ai_settings.provider.hidden_catalog')} <small>{catalogSearch.trim() ? `${matchingHiddenPresets.length} / ` : ''}{hiddenPresets.length}</small>
             </button>
             {hiddenExpanded && <div id="gonavi-ai-provider-hidden-list" className="gonavi-ai-provider-hidden-list">
-              <p className="gonavi-ai-provider-hidden-hint">{copy('ai_settings.provider.hidden_hint')}</p>
               {matchingHiddenPresets.map((preset) => <div className="gonavi-ai-provider-hidden-row" key={preset.key}>
-                <Tooltip title={preset.desc} trigger={['hover', 'focus']}><span title={preset.label}>{preset.label}</span></Tooltip>
-                <button type="button" aria-label={`${copy('ai_settings.provider.restore')}: ${preset.label}`}
-                  ref={(node) => { if (node) visibilityButtons.current.set(`hidden:${preset.key}`, node); else visibilityButtons.current.delete(`hidden:${preset.key}`); }}
-                  onClick={() => restorePreset(preset.key)}><EyeOutlined /> {copy('ai_settings.provider.restore')}</button>
+                <Tooltip {...hintTooltipTiming} title={preset.desc} trigger={['hover', 'focus']}>
+                  <span className="gonavi-ai-provider-icon" aria-hidden="true">{preset.icon}</span>
+                </Tooltip>
+                <span className="gonavi-ai-provider-hidden-label" title={preset.label}>{preset.label}</span>
+                <Tooltip {...hintTooltipTiming} title={copy('ai_settings.provider.restore')}>
+                  <button type="button" className="gonavi-ai-provider-hidden-restore" aria-label={`${copy('ai_settings.provider.restore')}: ${preset.label}`}
+                    ref={(node) => { if (node) visibilityButtons.current.set(`hidden:${preset.key}`, node); else visibilityButtons.current.delete(`hidden:${preset.key}`); }}
+                    onClick={() => restorePreset(preset.key)}><EyeOutlined /></button>
+                </Tooltip>
               </div>)}
-              {!matchingHiddenPresets.length && <div role="status">{copy('ai_settings.provider.no_matches')}</div>}
+              {!matchingHiddenPresets.length && <div className="gonavi-ai-provider-catalog-empty" role="status">{copy('ai_settings.provider.no_matches')}</div>}
             </div>}
           </section>}
-        <span className="gonavi-ai-provider-catalog-help">{copy('ai_settings.provider.resize_hint')}</span>
+          <span className="gonavi-ai-provider-catalog-help">{copy('ai_settings.provider.resize_hint')}</span>
+        </div>
       </aside>
       {layout.catalogVisible && !layout.narrow && <div {...layout.resizerProps} className="gonavi-ai-provider-resizer"
         aria-label={copy('ai_settings.provider.resize')} aria-controls="gonavi-ai-provider-catalog" title={copy('ai_settings.provider.resize_hint')}><span aria-hidden="true">⋮</span></div>}
@@ -533,7 +543,7 @@ const AISettingsProvidersSection: React.FC<AISettingsProvidersSectionProps> = ({
             </div>
             <div className="gonavi-ai-provider-save-actions"><Button size="middle" type="primary" onClick={onSaveProvider}
               loading={loading && saveMode === 'save'} disabled={duplicateCLI || loading && saveMode === 'copy'}>{copy(editingProvider?.id ? 'ai_settings.provider.save_changes' : 'ai_settings.provider.action.add')}</Button>
-              {editingProvider?.id && <Tooltip title={presetFromForm && presetCLIIdentity(presetFromForm) ? copy('ai_settings.provider.copy_cli_unavailable') : copy('ai_settings.provider.copy_hint')}>
+              {editingProvider?.id && <Tooltip {...hintTooltipTiming} title={presetFromForm && presetCLIIdentity(presetFromForm) ? copy('ai_settings.provider.copy_cli_unavailable') : copy('ai_settings.provider.copy_hint')}>
                 <Button type="text" size="small" onClick={onSaveProviderAsCopy} loading={loading && saveMode === 'copy'}
                   disabled={loading || duplicateCLI || Boolean(presetFromForm && presetCLIIdentity(presetFromForm))}>{copy('ai_settings.provider.save_as')}</Button>
               </Tooltip>}

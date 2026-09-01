@@ -2,6 +2,20 @@ import React from 'react';
 
 const STORAGE_KEY = 'gonavi.ai.providers.layout.v1';
 const DEFAULT_WIDTH = 336;
+// Two-column geometry. The catalog may never squeeze the editor below MIN_EDITOR_WIDTH,
+// and the drawer breakpoint is derived from that same budget instead of a standalone
+// guess, so a workspace that can still seat both columns never falls into drawer mode.
+export const MIN_CATALOG_WIDTH = 216;
+export const MAX_CATALOG_WIDTH = 520;
+export const MIN_EDITOR_WIDTH = 320;
+// Keep in sync with `.gonavi-ai-provider-resizer { flex: 0 0 17px }`.
+export const RESIZER_WIDTH = 17;
+export const NARROW_BREAKPOINT = MIN_CATALOG_WIDTH + RESIZER_WIDTH + MIN_EDITOR_WIDTH;
+export const isNarrowWorkspace = (width: number) => width > 0 && width < NARROW_BREAKPOINT;
+export const maxCatalogWidth = (width: number) => Math.max(MIN_CATALOG_WIDTH,
+  Math.min(MAX_CATALOG_WIDTH, width ? width - MIN_EDITOR_WIDTH - RESIZER_WIDTH : MAX_CATALOG_WIDTH));
+export const workspaceClassName = (narrow: boolean, catalogVisible: boolean, dragging: boolean) =>
+  `gonavi-ai-provider-workspace${narrow ? ' is-narrow' : ''}${narrow && catalogVisible ? ' is-drawer-open' : ''}${dragging ? ' is-resizing' : ''}`;
 interface LayoutPreferences {
   catalogCollapsed: boolean;
   catalogWidth: number;
@@ -19,7 +33,7 @@ function readPreferences(): LayoutPreferences {
       density: value.density === 'normal' ? 'normal' : 'compact',
       hiddenPresetKeys: Array.isArray(value.hiddenPresetKeys)
         ? [...new Set<string>(value.hiddenPresetKeys.filter((key: unknown): key is string => typeof key === 'string' && Boolean(key.trim())).map((key: string) => key.trim()))] : [],
-      catalogWidth: Number.isFinite(value.catalogWidth) ? clamp(value.catalogWidth, 216, 520) : DEFAULT_WIDTH };
+      catalogWidth: Number.isFinite(value.catalogWidth) ? clamp(value.catalogWidth, MIN_CATALOG_WIDTH, MAX_CATALOG_WIDTH) : DEFAULT_WIDTH };
   } catch { return { ...defaults }; }
 }
 
@@ -32,9 +46,9 @@ export function useAIProviderLayout() {
   const [dragging, setDragging] = React.useState(false);
   const workspaceRef = React.useRef<HTMLDivElement>(null);
   const drag = React.useRef<{ x: number; width: number; preference: number } | null>(null);
-  const narrow = width > 0 && width < 660;
-  const maximum = Math.max(216, Math.min(520, width ? width - 320 - 16 : 520));
-  const catalogWidth = clamp(preferences.catalogWidth, 216, maximum);
+  const narrow = isNarrowWorkspace(width);
+  const maximum = maxCatalogWidth(width);
+  const catalogWidth = clamp(preferences.catalogWidth, MIN_CATALOG_WIDTH, maximum);
   React.useEffect(() => {
     try { window.localStorage.setItem(STORAGE_KEY, JSON.stringify(preferences)); } catch { /* Private storage may be unavailable. */ }
   }, [preferences]);
@@ -60,14 +74,14 @@ export function useAIProviderLayout() {
   };
   const resizerProps = {
     role: 'separator', tabIndex: 0, 'aria-orientation': 'vertical' as const,
-    'aria-valuemin': 216, 'aria-valuemax': maximum, 'aria-valuenow': Math.round(catalogWidth),
+    'aria-valuemin': MIN_CATALOG_WIDTH, 'aria-valuemax': maximum, 'aria-valuenow': Math.round(catalogWidth),
     onPointerDown: (event: React.PointerEvent<HTMLDivElement>) => {
       if (event.button !== 0 || narrow) return;
       event.preventDefault(); event.currentTarget.focus(); event.currentTarget.setPointerCapture(event.pointerId);
       drag.current = { x: event.clientX, width: catalogWidth, preference: preferences.catalogWidth }; setDragging(true);
     },
     onPointerMove: (event: React.PointerEvent<HTMLDivElement>) => {
-      if (drag.current) setPreference('catalogWidth', clamp(drag.current.width + event.clientX - drag.current.x, 216, maximum));
+      if (drag.current) setPreference('catalogWidth', clamp(drag.current.width + event.clientX - drag.current.x, MIN_CATALOG_WIDTH, maximum));
     },
     onPointerUp: () => finishDrag(false),
     onPointerCancel: () => finishDrag(true),
@@ -77,9 +91,9 @@ export function useAIProviderLayout() {
       if (event.key === 'Escape' && drag.current) { event.preventDefault(); event.stopPropagation(); finishDrag(true); return; }
       if (!['ArrowLeft', 'ArrowRight', 'Home', 'End', 'Enter'].includes(event.key)) return;
       event.preventDefault();
-      const next = event.key === 'Home' ? 216 : event.key === 'End' ? maximum : event.key === 'Enter' ? DEFAULT_WIDTH
+      const next = event.key === 'Home' ? MIN_CATALOG_WIDTH : event.key === 'End' ? maximum : event.key === 'Enter' ? DEFAULT_WIDTH
         : catalogWidth + (event.key === 'ArrowRight' ? 16 : -16);
-      setPreference('catalogWidth', clamp(next, 216, maximum));
+      setPreference('catalogWidth', clamp(next, MIN_CATALOG_WIDTH, maximum));
     },
   };
   return { preferences, setPreference, setPresetHidden, workspaceRef, catalogWidth, narrow, dragging, resizerProps,

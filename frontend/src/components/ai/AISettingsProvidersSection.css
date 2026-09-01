@@ -1,10 +1,8 @@
-.gonavi-ai-provider-management { display: flex; flex-direction: column; height: 100%; min-height: 0; min-width: 0; color: var(--provider-text); }
+.gonavi-ai-provider-management { display: flex; flex-direction: column; flex: 1; height: 100%; min-height: 0; min-width: 0; color: var(--provider-text); }
 .gonavi-ai-provider-management button { font: inherit; }
-.gonavi-ai-provider-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-shrink: 0; margin-bottom: 14px; }
-.gonavi-ai-provider-heading > div:first-child { display: grid; gap: 3px; min-width: 0; }
-.gonavi-ai-provider-heading strong { font-size: 15px; }
-.gonavi-ai-provider-heading > div > span { color: var(--provider-muted); font-size: 12px; }
-.gonavi-ai-provider-heading .gonavi-ai-provider-add { width: 182px; flex-shrink: 0; }
+.gonavi-ai-provider-heading { display: flex; align-items: center; justify-content: flex-start; gap: 10px; flex-shrink: 0; margin-bottom: 10px; }
+.gonavi-ai-provider-heading-copy { color: var(--provider-muted); font-size: 12px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 0 0 auto; max-width: 42%; }
+.gonavi-ai-provider-heading .gonavi-ai-provider-add { flex: 0 0 auto; width: 12.75em; }
 .gonavi-ai-provider-list { min-height: 0; max-height: 210px; flex-shrink: 0; display: flex; flex-direction: column; padding-bottom: 12px; border-bottom: 1px solid var(--provider-line); }
 .gonavi-ai-provider-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
 .gonavi-ai-provider-toolbar > .ant-input-affix-wrapper { flex: 1 1 150px; max-width: 230px; font-size: 12px; }
@@ -30,12 +28,12 @@
 [data-density='normal'] .gonavi-ai-provider-select { min-height: 54px; }
 .gonavi-ai-provider-chip-model { font-family: ui-monospace, monospace; font-size: 11px; color: var(--provider-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gonavi-ai-provider-empty { color: var(--provider-muted); font-size: 12px; padding: 6px 0; }
-.gonavi-ai-provider-workspace-toolbar { display: flex; align-items: center; gap: 12px; flex-shrink: 0; padding: 10px 0; }
+.gonavi-ai-provider-workspace-toolbar { display: flex; align-items: center; gap: 10px; flex-shrink: 0; padding: 10px 0; }
 .gonavi-ai-provider-workspace-toolbar > span { margin-left: auto; font-size: 11px; color: var(--provider-muted); }
+.gonavi-ai-provider-catalog-search { flex: 0 0 auto; width: 12.5em; max-width: 42%; font-size: 12px; }
 .gonavi-ai-provider-workspace { display: flex; flex: 1; min-width: 0; min-height: 0; position: relative; isolation: isolate; gap: 0; }
-.gonavi-ai-provider-catalog { flex: 0 0 var(--provider-catalog-width, 336px); width: var(--provider-catalog-width, 336px); min-width: 0; min-height: 0; display: flex; flex-direction: column; }
-.gonavi-ai-provider-catalog > .ant-input-affix-wrapper { flex-shrink: 0; margin-bottom: 9px; font-size: 12px; }
-.gonavi-ai-provider-catalog-scroll { overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; flex: 1; min-height: 0; padding: 1px 5px 1px 1px; scrollbar-width: thin; }
+.gonavi-ai-provider-catalog { flex: 0 0 var(--provider-catalog-width, 336px); width: var(--provider-catalog-width, 336px); align-self: stretch; height: 100%; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.gonavi-ai-provider-catalog-scroll { overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; flex: 1 1 0; min-height: 0; padding: 1px 5px 1px 1px; scrollbar-width: thin; }
 .gonavi-ai-provider-catalog-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 98px), 1fr)); gap: 5px; align-content: start; }
 .gonavi-ai-provider-catalog-entry { position: relative; display: flex; min-width: 0; }
 .gonavi-ai-provider-catalog-entry > .gonavi-ai-provider-catalog-card { width: 100%; }
@@ -47,19 +45,23 @@
 .gonavi-ai-provider-catalog-label { padding-right: 20px; }
 .gonavi-ai-provider-visibility { position: absolute; right: 5px; bottom: 7px; display: grid; place-items: center; width: 23px; height: 23px; padding: 0; border: 0; border-radius: 5px; color: var(--provider-muted); background: transparent; cursor: pointer; }
 .gonavi-ai-provider-visibility:hover, .gonavi-ai-provider-visibility:focus-visible { color: var(--provider-active); background: var(--provider-active-bg); }
-.gonavi-ai-provider-hidden { display: flex; flex-direction: column; flex-shrink: 0; min-height: 0; max-height: 50%; margin-top: 8px; border-top: 1px solid var(--provider-line); }
-.gonavi-ai-provider-hidden-toggle { display: flex; align-items: center; flex-shrink: 0; gap: 7px; padding: 11px 4px; width: 100%; border: 0; color: var(--provider-muted); background: transparent; font-size: 12px; text-align: left; cursor: pointer; }
+.gonavi-ai-provider-catalog-footer { display: flex; flex-direction: column; flex: 0 0 auto; margin-top: auto; min-height: 0; max-height: min(38%, 220px); }
+.gonavi-ai-provider-hidden { display: flex; flex-direction: column; flex: 0 1 auto; min-height: 0; border-top: 1px solid var(--provider-line); }
+.gonavi-ai-provider-hidden-toggle { display: flex; align-items: center; flex-shrink: 0; gap: 7px; padding: 6px 4px; width: 100%; border: 0; color: var(--provider-muted); background: transparent; font-size: 12px; text-align: left; cursor: pointer; }
 .gonavi-ai-provider-hidden-toggle small { margin-left: auto; font-variant-numeric: tabular-nums; }
-.gonavi-ai-provider-hidden-list { overflow-y: auto; overscroll-behavior: contain; min-height: 0; scrollbar-width: thin; padding-right: 3px; }
-.gonavi-ai-provider-hidden-hint, .gonavi-ai-provider-catalog-empty { margin: 0 4px 8px; font-size: 11px; color: var(--provider-muted); }
-.gonavi-ai-provider-hidden-row { display: flex; align-items: center; gap: 8px; padding: 5px 4px; min-width: 0; border-radius: 5px; }
-.gonavi-ai-provider-hidden-row > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--provider-text); }
-.gonavi-ai-provider-hidden-row > button { margin-left: auto; flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--provider-line); border-radius: 5px; padding: 4px 6px; color: var(--provider-muted); background: transparent; font-size: 11px; cursor: pointer; }
-.gonavi-ai-provider-hidden-row > button:hover { color: var(--provider-active); background: var(--provider-active-bg); }
+.gonavi-ai-provider-hidden-list { overflow-y: auto; overscroll-behavior: contain; flex: 1 1 auto; min-height: 0; scrollbar-width: thin; padding: 0 2px 4px; }
+.gonavi-ai-provider-hidden-row { display: flex; align-items: center; gap: 8px; min-width: 0; min-height: 32px; padding: 2px 2px 2px 4px; border-radius: 5px; }
+.gonavi-ai-provider-hidden-row .gonavi-ai-provider-icon { width: 22px; height: 22px; font-size: 13px; border-radius: 5px; }
+.gonavi-ai-provider-hidden-label { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--provider-text); }
+.gonavi-ai-provider-hidden-restore { display: grid; place-items: center; width: 23px; height: 23px; padding: 0; border: 0; border-radius: 5px; color: var(--provider-muted); background: transparent; cursor: pointer; flex-shrink: 0; }
+.gonavi-ai-provider-hidden-restore:hover, .gonavi-ai-provider-hidden-restore:focus-visible { color: var(--provider-active); background: var(--provider-active-bg); }
+.gonavi-ai-provider-catalog-empty { margin: 0 4px 8px; font-size: 11px; color: var(--provider-muted); }
+.gonavi-ai-settings-panel-providers { height: 100%; min-height: 0; display: flex; flex-direction: column; }
+.gonavi-ai-settings-panel-providers[hidden] { display: none !important; }
 .gonavi-ai-provider-catalog-top { display: flex; align-items: center; justify-content: space-between; gap: 3px; width: 100%; }
 .gonavi-ai-provider-catalog-top small { font-size: 10px; color: var(--provider-muted); white-space: nowrap; }
 .gonavi-ai-provider-icon { flex-shrink: 0; display: inline-grid; place-items: center; width: 29px; height: 29px; border-radius: 7px; background: var(--provider-active-bg); color: var(--provider-active); font-size: 17px; }
-.gonavi-ai-provider-catalog-help { font-size: 10px; color: var(--provider-muted); flex-shrink: 0; padding-top: 7px; }
+.gonavi-ai-provider-catalog-help { font-size: 10px; color: var(--provider-muted); flex-shrink: 0; padding: 4px 4px 2px; }
 .gonavi-ai-provider-resizer { width: 17px; flex: 0 0 17px; cursor: col-resize; touch-action: none; position: relative; display: flex; align-items: center; justify-content: center; outline-offset: -3px; }
 .gonavi-ai-provider-resizer::before { content: ''; position: absolute; top: 0; bottom: 0; left: 8px; width: 1px; background: var(--provider-line); }
 .gonavi-ai-provider-resizer > span { z-index: 1; width: 9px; padding: 4px 0; border: 1px solid var(--provider-line); border-radius: 6px; color: var(--provider-muted); background: var(--provider-bg); font-size: 12px; text-align: center; }
@@ -97,7 +99,11 @@
 .gonavi-ai-provider-test-result { flex: 1 1 120px; min-width: 0; overflow-wrap: anywhere; color: var(--provider-muted); font-size: 11px; }
 .gonavi-ai-provider-test-result .anticon { color: var(--provider-active); }
 .gonavi-ai-provider-test-result[data-error='true'] { color: var(--gn-danger, #cf4343); }
-.is-narrow > .gonavi-ai-provider-catalog { position: absolute; z-index: 3; inset: 0 auto 0 0; width: min(380px, 92%); padding: 10px; background: var(--provider-bg); border: 1px solid var(--provider-line); border-radius: 8px; box-shadow: 6px 0 18px #0002; }
+/* The drawer fills the workspace instead of leaving the scrim bare on its right.
+   Its shell background is only 98% opaque, so the editor underneath is hidden
+   rather than allowed to bleed through as unreadable ghost text. */
+.is-narrow > .gonavi-ai-provider-catalog { position: absolute; z-index: 3; inset: 0; width: auto; padding: 10px; background: var(--provider-bg); border: 1px solid var(--provider-line); border-radius: 8px; box-shadow: 6px 0 18px #0002; }
+.is-drawer-open > .gonavi-ai-provider-editor { visibility: hidden; }
 .gonavi-ai-provider-scrim { position: absolute; z-index: 2; inset: 0; background: #0003; border: 0; }
 .gonavi-ai-provider-management button:focus-visible, .gonavi-ai-provider-resizer:focus-visible { outline: 2px solid var(--provider-active); outline-offset: 2px; }
 .gonavi-provider-settings-host .gonavi-settings-center-pane-heading > div { display: flex; align-items: baseline; flex-wrap: wrap; column-gap: 12px; }
@@ -108,7 +114,7 @@
 }
 @media (max-height: 800px) {
   .gonavi-provider-settings-host .gonavi-ai-provider-list { max-height: 112px; }
-  .gonavi-provider-settings-host .gonavi-ai-provider-heading > div > span { display: none; }
+  .gonavi-provider-settings-host .gonavi-ai-provider-heading-copy { display: none; }
   .gonavi-provider-settings-host .gonavi-settings-center-pane-heading > div > div:last-child { display: none; }
 }
 @container provider-editor (min-width: 510px) {

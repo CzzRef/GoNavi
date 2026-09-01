@@ -93,6 +93,7 @@ describe('provider settings mounted controls', () => {
     const originalDraft = JSON.stringify(values);
     await act(async () => visibilityAction('Hide provider: Codex Subscription').props.onClick());
     expect(hiddenFolder().props['aria-expanded']).toBe(false);
+    expect(renderer!.root.findAllByProps({ 'aria-label': 'Restore: Codex Subscription' })).toHaveLength(0);
     expect(renderer!.root.findAllByProps({ className: 'gonavi-ai-provider-hidden-row' })).toHaveLength(0);
     expect(renderer!.root.findAllByProps({ 'aria-label': 'Hide provider: Codex Subscription' })).toHaveLength(0);
     expect(rows()).toHaveLength(2);
@@ -402,6 +403,35 @@ describe('provider settings mounted controls', () => {
     expect(props.form.setFieldsValue).not.toHaveBeenCalled();
     expect(props.onSaveProvider).not.toHaveBeenCalled();
     expect(props.onTestProvider).not.toHaveBeenCalled();
+  });
+
+  it('renders hidden candidates as compact icon rows and keeps the add control on one heading row', async () => {
+    await render({ providers: [] });
+    const heading = renderer!.root.findByProps({ className: 'gonavi-ai-provider-heading' });
+    expect(renderedText(heading)).toContain('Configure model endpoints and secrets');
+    expect(renderedText(heading)).not.toContain('Model providers');
+    expect(addSelector().props.showSearch).toBe(true);
+    await act(async () => visibilityAction('Hide provider: Codex Subscription').props.onClick());
+    await act(async () => hiddenFolder().props.onClick());
+    const hiddenRows = renderer!.root.findAllByProps({ className: 'gonavi-ai-provider-hidden-row' });
+    expect(hiddenRows).toHaveLength(1);
+    expect(renderedText(hiddenRows[0])).toContain('Codex Subscription');
+    expect(renderer!.root.findAll((node) => node.type === 'button' && node.props.className?.includes('gonavi-ai-provider-catalog-card')).filter((button) => renderedText(button).includes('Codex Subscription'))).toHaveLength(0);
+    expect(hiddenFolder().props.title).toContain('Hidden candidates do not affect saved configurations');
+    expect(props.onAddProvider).not.toHaveBeenCalled();
+  });
+
+  it('keeps catalog search on the catalog toolbar and hides it when the catalog is collapsed', async () => {
+    await render();
+    const catalogSearches = () => renderer!.root.findAll((node) => node.type === 'input' && node.props['aria-label'] === 'Find a provider');
+    const catalogToggle = () => renderer!.root.findByProps({ className: 'gonavi-ai-provider-catalog-toggle' });
+    expect(catalogSearches()).toHaveLength(1);
+    expect(catalogToggle().props['aria-expanded']).toBe(true);
+    await act(async () => catalogToggle().props.onClick());
+    expect(catalogToggle().props['aria-expanded']).toBe(false);
+    expect(catalogSearches()).toHaveLength(0);
+    await act(async () => catalogToggle().props.onClick());
+    expect(catalogSearches()).toHaveLength(1);
   });
 
   it('keeps a compact preset dropdown for new providers as well as saved providers', async () => {

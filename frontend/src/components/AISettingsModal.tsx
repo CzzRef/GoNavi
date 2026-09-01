@@ -1049,7 +1049,7 @@ export const AISettingsContent: React.FC<AISettingsContentProps> = ({ active, da
                 role="tabpanel"
                 aria-labelledby={`gonavi-ai-settings-tab-${sectionKey}`}
                 hidden={activeSection !== sectionKey}
-                style={sectionKey === 'providers' ? { height: '100%', minHeight: 0 } : undefined}
+                className={sectionKey === 'providers' ? 'gonavi-ai-settings-panel-providers' : undefined}
             >
                 {sectionKey !== 'providers' && <div style={{ paddingBottom: 12, marginBottom: 2 }}>
                     <div style={{ marginTop: 3, fontSize: 'var(--gn-font-size-sm, 12px)', lineHeight: 1.55, color: overlayTheme.mutedText }}>

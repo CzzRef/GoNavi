@@ -600,6 +600,19 @@ describe('AISettingsContent provider async behavior', () => {
     expect(mocks.service.AISaveProvider).not.toHaveBeenCalled();
   });
 
+  it('hides the provider panel instead of stacking it above other settings sections', async () => {
+    await mount();
+    const panel = () => renderer!.root.findByProps({ id: 'gonavi-ai-settings-panel-providers' });
+    expect(panel().props.hidden).toBe(false);
+    expect(panel().props.className).toBe('gonavi-ai-settings-panel-providers');
+    expect(panel().props.style?.display).not.toBe('flex');
+    await act(async () => mocks.sidebarProps.onSelectSection('safety'));
+    expect(panel().props.hidden).toBe(true);
+    expect(panel().props.style?.display).not.toBe('flex');
+    expect(renderer!.root.findByProps({ id: 'gonavi-ai-settings-panel-safety' }).props.hidden).toBe(false);
+    expect(mocks.providerProps).toEqual(expect.objectContaining({ isEditing: false }));
+  });
+
   it('does not mark untouched CLI discovery as a user edit or overwrite an edited field', async () => {
     await mount();
     await act(async () => { await mocks.providerProps.onAddProvider('grok'); mocks.providerProps.onCLIDefaults({ ...capability, apiFormat: 'grok-cli' }); });
