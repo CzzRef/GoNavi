@@ -66,17 +66,16 @@ shasum -a 256 GoNavi-provider-settings-<yymmdd>-r<N>
 
 ### 2.4 停旧起新
 
-必须保证单实例：多个实例会争抢同一份供应商配置，观察到的状态不可信。
+必须保证单实例：多个实例会争抢同一份供应商配置，观察到的状态不可信。只杀上一轮不够。
+
+纯重启（不重建）从仓库根跑 Skill 里的脚本：
 
 ```bash
-for p in $(pgrep -f "GoNavi-provider-settings-<yymmdd>-r<N-1>"); do kill -9 "$p"; done
-sleep 1
-open -n build/bin/GoNavi-Provider-Verification-r<N>.app
-sleep 4
-ps aux | grep -i "GoNavi-provider-settings" | grep -v grep | awk '{print $2, $11}'
+.agents/skills/gonavi-verify-build-restart/restart.sh        # 最高 rN
+.agents/skills/gonavi-verify-build-restart/restart.sh r45    # 指定轮次
 ```
 
-回读必须只剩一行，且路径是本轮的 `.app`。
+脚本会杀掉所有 `GoNavi-provider-settings-` 进程再打开目标 `.app`。回读必须只剩一行，且路径是本轮的 `.app`。打包完成后的起新也走这条，不要手抄 kill/open。
 
 ### 2.5 记录
 
