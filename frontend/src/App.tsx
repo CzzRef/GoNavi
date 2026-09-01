@@ -1199,8 +1199,42 @@ function App() {
     APP_APPLICATION_QUIT_MODAL_Z_INDEX,
     settingsChildModalZIndex + 100,
   );
-  const toggleAIPanel = useStore(state => state.toggleAIPanel);
   const setAIPanelVisible = useStore(state => state.setAIPanelVisible);
+  const aiPanelTerminalGuardRef = useRef<(() => Promise<boolean>) | null>(null);
+  const aiPanelTerminalActionPendingRef = useRef(false);
+  const registerAIPanelTerminalGuard = useCallback((guard: (() => Promise<boolean>) | null) => {
+    aiPanelTerminalGuardRef.current = guard;
+  }, []);
+  const runAIPanelTerminalAction = useCallback((action: () => void) => {
+    if (aiPanelTerminalActionPendingRef.current) return;
+    aiPanelTerminalActionPendingRef.current = true;
+    void (async () => {
+      try {
+        const canTerminate = await aiPanelTerminalGuardRef.current?.();
+        if (canTerminate === false) return;
+        action();
+      } catch (error) {
+        console.warn('Failed to stop AI activity before changing the panel state', error);
+      } finally {
+        aiPanelTerminalActionPendingRef.current = false;
+      }
+    })();
+  }, []);
+  const handleCloseAIPanel = useCallback(() => {
+    runAIPanelTerminalAction(() => setAIPanelVisible(false));
+  }, [runAIPanelTerminalAction, setAIPanelVisible]);
+  const handleDetachAIPanel = useCallback(() => {
+    runAIPanelTerminalAction(() => detachAIChatPanel());
+  }, [detachAIChatPanel, runAIPanelTerminalAction]);
+  const handleToggleOrFocusAIPanel = useCallback(() => {
+    if (aiPanelVisible && (!aiChatDetached || !hasNativeDetachedWindowManager())) {
+      handleCloseAIPanel();
+      return;
+    }
+    void toggleOrFocusNativeAIChatFromMainWindow().catch((error) => {
+      void message.error(error instanceof Error ? error.message : String(error));
+    });
+  }, [aiChatDetached, aiPanelVisible, handleCloseAIPanel]);
   useEffect(() => {
     if (!aiPanelVisible || !detachedAIChatWindow || !hasNativeDetachedWindowManager()) {
       return undefined;
@@ -4181,7 +4215,7 @@ function App() {
           <Button
               type="text"
               icon={<RobotOutlined />}
-              onClick={toggleAIPanel}
+              onClick={handleToggleOrFocusAIPanel}
               style={legacyAiEdgeHandleStyle}
               data-gonavi-legacy-ai-edge-action="true"
           >
@@ -5139,9 +5173,7 @@ function App() {
                   handleCreateConnection();
                   break;
               case 'toggleAIPanel':
-                  void toggleOrFocusNativeAIChatFromMainWindow().catch((error) => {
-                      void message.error(error instanceof Error ? error.message : String(error));
-                  });
+                  handleToggleOrFocusAIPanel();
                   break;
               case 'toggleLogPanel':
                   handleToggleLogPanel();
@@ -5167,7 +5199,7 @@ function App() {
       return () => {
           window.removeEventListener('keydown', handleGlobalShortcut, true);
       };
-  }, [activeShortcutPlatform, capturingShortcutAction, handleCreateConnection, handleFocusSidebarSearch, handleManualResetWindowZoom, handleNewQuery, handleOpenToolCenterPane, handleTitleBarWindowToggle, handleToggleLogPanel, isMacRuntime, selectPresetTheme, shortcutOptions, switchActiveTabByOffset, themeMode, toggleAIPanel, useNativeMacWindowControls]);
+  }, [activeShortcutPlatform, capturingShortcutAction, handleCreateConnection, handleFocusSidebarSearch, handleManualResetWindowZoom, handleNewQuery, handleOpenToolCenterPane, handleTitleBarWindowToggle, handleToggleLogPanel, handleToggleOrFocusAIPanel, isMacRuntime, selectPresetTheme, shortcutOptions, switchActiveTabByOffset, themeMode, useNativeMacWindowControls]);
 
   useEffect(() => {
       if (!capturingShortcutAction) {
@@ -8541,7 +8573,7 @@ function App() {
                             onOpenSettingsNavigation={handleTitleBarSettingsNavigation}
                             isWebRuntime={isWebRuntime}
                             onOpenDataSyncWorkbench={handleOpenDataSyncWorkbench}
-                            onToggleAI={toggleAIPanel}
+                            onToggleAI={handleToggleOrFocusAIPanel}
                             onToggleLogPanel={handleToggleLogPanel}
                             uiVersion={appearance.uiVersion}
                             v2ExplorerContext={v2ExplorerContext}
@@ -8678,7 +8710,10 @@ function App() {
                   <TabManager onFocusSidebarSearch={handleFocusSidebarSearch} />
                   <FloatingWorkbenchWindows />
                   <FloatingQueryResultWindows />
-                  <NativeDetachedWindowController onOpenAISettings={handleOpenAISettings} />
+                  <NativeDetachedWindowController
+                    onOpenAISettings={handleOpenAISettings}
+                    onToggleAI={handleToggleOrFocusAIPanel}
+                  />
                </div>
                {!isV2Ui && !aiPanelVisible && (
                <>
@@ -8701,7 +8736,7 @@ function App() {
                             type="button"
                             className="gn-v2-ai-panel-backdrop"
                             aria-label={t('app.ai_panel.aria.close')}
-                            onClick={() => setAIPanelVisible(false)}
+                            onClick={handleCloseAIPanel}
                             style={{
                               position: 'absolute',
                               inset: 0,
@@ -8785,7 +8820,7 @@ function App() {
                                 </div>
                               )}
                               <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-                                <Button aria-label={t('app.ai_panel.aria.close')} onClick={() => setAIPanelVisible(false)}>{t('app.ai_panel.action.close')}</Button>
+                                <Button aria-label={t('app.ai_panel.aria.close')} onClick={handleCloseAIPanel}>{t('app.ai_panel.action.close')}</Button>
                                 <Button type="primary" onClick={handleRetryAIPanelRender}>{t('app.ai_panel.action.reload')}</Button>
                               </div>
                             </div>
@@ -8813,8 +8848,9 @@ function App() {
                             darkMode={darkMode}
                             bgColor={bgContent}
                             presentation="dock"
-                            onClose={() => setAIPanelVisible(false)}
-                            onDetach={() => detachAIChatPanel()}
+                            onClose={handleCloseAIPanel}
+                            onDetach={handleDetachAIPanel}
+                            onRegisterTerminalGuard={registerAIPanelTerminalGuard}
                             onOpenSettings={() => {
                               handleOpenAISettings();
                             }}
@@ -8834,6 +8870,7 @@ function App() {
                     onOpenSettings={() => handleOpenAISettings()}
                     onRenderError={handleAIPanelRenderError}
                     onRetryRender={handleRetryAIPanelRender}
+                    onRegisterTerminalGuard={registerAIPanelTerminalGuard}
                   />
                )}
              </div>
