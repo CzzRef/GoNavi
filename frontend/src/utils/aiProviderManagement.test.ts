@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AIProviderConfig } from '../types';
-import { buildProviderModelOptions, filterProviders, getCLIConfigPrefill, parseCLIModelCatalog, parseProviderCheckResult, providerDraftFingerprint } from './aiProviderManagement';
+import { buildProviderModelOptions, filterProviders, getCLIConfigPrefill, parseCLIModelCatalog, parseProviderCheckResult, providerCopyName, providerDraftFingerprint } from './aiProviderManagement';
 
 const providers = [
   { id: 'c', name: 'Personal subscription', type: 'custom', apiFormat: 'codex-cli', model: 'model-c', models: ['extra-model'] },
@@ -19,6 +19,25 @@ describe('provider draft comparison', () => {
     for (const patch of [{ disabledModels: ['one'] }, { customModels: ['custom'] }, { model: 'other' }, { apiKey: 'changed' }, { models: ['two', 'one'] }]) {
       expect(providerDraftFingerprint({ ...restored, ...patch })).not.toBe(providerDraftFingerprint(legacy));
     }
+  });
+});
+
+describe('copy naming', () => {
+  const existing = ['OpenAI', 'OpenAI · copy', 'OpenAI · copy 2'];
+
+  it('keeps a renamed draft exactly as typed', () => {
+    expect(providerCopyName('Team key', existing, 'copy')).toBe('Team key');
+    expect(providerCopyName('  Team key  ', existing, 'copy')).toBe('Team key');
+  });
+
+  it('adds the suffix only when the name would collide', () => {
+    expect(providerCopyName('OpenAI', existing, 'copy')).toBe('OpenAI · copy 3');
+    expect(providerCopyName('OpenAI', ['OpenAI'], 'copy')).toBe('OpenAI · copy');
+  });
+
+  it('falls back to the bare suffix for an empty name', () => {
+    expect(providerCopyName('   ', [], 'copy')).toBe('copy');
+    expect(providerCopyName('', ['copy'], 'copy')).toBe('copy 2');
   });
 });
 

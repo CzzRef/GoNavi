@@ -42,9 +42,14 @@ export const enabledProviderModels = (models: string[], disabledModels?: string[
   return normalizeProviderModels(models).filter((model) => !disabled.has(model));
 };
 
+// A copy only needs a distinguishing suffix when its name would collide with an
+// existing provider. A draft the user already renamed keeps that name untouched:
+// appending the suffix anyway would silently overwrite a deliberate choice.
 export const providerCopyName = (name: string, names: string[], suffix: string): string => {
-  const base = `${name.trim()} · ${suffix}`;
+  const trimmed = name.trim();
   const used = new Set(names);
+  if (trimmed && !used.has(trimmed)) return trimmed;
+  const base = trimmed ? `${trimmed} · ${suffix}` : suffix;
   if (!used.has(base)) return base;
   let ordinal = 2;
   while (used.has(`${base} ${ordinal}`)) ordinal++;
