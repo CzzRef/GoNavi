@@ -1,0 +1,174 @@
+{
+  "scope": "Actual GoNavi frontend with mock bridge and synthetic configuration; no model, login or database requests",
+  "browserProfile": "Default",
+  "url": "http://127.0.0.1:5186/",
+  "driver": "DOM events and focus checks through ego-browser",
+  "checks": {
+    "collapsed": {
+      "normalCards": 20,
+      "expanded": "false",
+      "folderRect": {
+        "x": 439.5,
+        "y": 816.7890625,
+        "width": 336,
+        "height": 44,
+        "top": 816.7890625,
+        "right": 775.5,
+        "bottom": 860.7890625,
+        "left": 439.5
+      },
+      "catalogRect": {
+        "x": 439.5,
+        "y": 351.4609375,
+        "width": 336,
+        "height": 532.0390625,
+        "top": 351.4609375,
+        "right": 775.5,
+        "bottom": 883.5,
+        "left": 439.5
+      },
+      "savedProvidersUnchanged": true,
+      "defaultUnchanged": true,
+      "providerWrites": []
+    },
+    "restored": {
+      "orderRestored": true,
+      "folderRemoved": true,
+      "chips": 2,
+      "default": "Codex · 隐藏验证"
+    },
+    "hidesAgain": {
+      "folded": true,
+      "savedCLIStillVisible": true,
+      "hiddenCount": 2
+    },
+    "searched": {
+      "folded": true,
+      "matchCount": "1 / 2",
+      "normalCards": 0,
+      "editorName": "Codex · 隐藏验证",
+      "help": "1 个匹配项已隐藏，展开下方目录可恢复。"
+    },
+    "addChoices": {
+      "items": [
+        "Atlas Cloud",
+        "OrcaRouter",
+        "DeepSeek",
+        "通义千问（百炼通用）",
+        "通义千问（Coding Plan）",
+        "智谱 GLM",
+        "Kimi",
+        "Claude",
+        "Claude 订阅",
+        "Grok 订阅",
+        "Gemini",
+        "火山方舟",
+        "火山 Coding Plan",
+        "MiniMax",
+        "CodeBuddy",
+        "Cursor",
+        "Cursor CLI",
+        "Ollama",
+        "自定义"
+      ],
+      "editorName": "Codex · 隐藏验证"
+    },
+    "reopened": {
+      "hiddenPersisted": true,
+      "folded": true,
+      "chips": 2,
+      "default": "Codex · 隐藏验证",
+      "writes": []
+    },
+    "narrowHiddenScroll": {
+      "clientHeight": 68,
+      "scrollHeight": 100,
+      "withinScrollArea": true,
+      "withinViewport": true
+    },
+    "narrowRestored": {
+      "normalCards": 20,
+      "hiddenRows": [
+        "OpenAI"
+      ],
+      "focusLabel": "恢复显示: OpenAI",
+      "providerMutationCalls": 0,
+      "errors": []
+    }
+  },
+  "viewportChecks": {
+    "desktopLight": {
+      "width": 1440,
+      "height": 980,
+      "background": "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(250,250,248,0.98) 100%)",
+      "folder": {
+        "x": 439.5,
+        "y": 716.9453125,
+        "width": 336,
+        "height": 44,
+        "top": 716.9453125,
+        "right": 775.5,
+        "bottom": 760.9453125,
+        "left": 439.5
+      },
+      "overflow": false
+    },
+    "narrowLight": {
+      "width": 760,
+      "height": 680,
+      "background": "linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(250,250,248,0.98) 100%)",
+      "folder": {
+        "x": 302.5,
+        "y": 438.0625,
+        "width": 380,
+        "height": 44,
+        "top": 438.0625,
+        "right": 682.5,
+        "bottom": 482.0625,
+        "left": 302.5
+      },
+      "catalog": {
+        "x": 291.5,
+        "y": 338.0390625,
+        "width": 402,
+        "height": 245.4609375,
+        "top": 338.0390625,
+        "right": 693.5,
+        "bottom": 583.5,
+        "left": 291.5
+      },
+      "restoreButtons": [
+        {
+          "label": "恢复显示: OpenAI",
+          "rect": {
+            "x": 602.5,
+            "y": 512.34375,
+            "width": 73,
+            "height": 27.28125,
+            "top": 512.34375,
+            "right": 675.5,
+            "bottom": 539.625,
+            "left": 602.5
+          }
+        },
+        {
+          "label": "恢复显示: Atlas Cloud",
+          "rect": {
+            "x": 602.5,
+            "y": 549.625,
+            "width": 73,
+            "height": 27.28125,
+            "top": 549.625,
+            "right": 675.5,
+            "bottom": 576.90625,
+            "left": 602.5
+          }
+        }
+      ],
+      "overflow": false
+    }
+  },
+  "providerMutationCalls": 0,
+  "runtimeErrors": [],
+  "desktopNativeKeyboard": "not_run"
+}

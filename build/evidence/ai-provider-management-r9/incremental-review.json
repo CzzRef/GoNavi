@@ -1,0 +1,77 @@
+{
+  "scope": "Incremental candidate visibility changes on preserved czz-dev working tree",
+  "baseline_files": 64,
+  "preserved_files": 53,
+  "changed_paths": [
+    {
+      "path": "czz-docs/ai-provider-management-task-card.md",
+      "baseline_sha256": "4cc3b92e17aec4ccc5049274c84f947844f0606868eb86bdc52d3b3fb2e9875d",
+      "current_sha256": "f6e9055d99ea9156c6c1860d4ae5dee62ab596e8ce9d6c9c3730be0bb29cf728",
+      "new_whitespace_warnings": 0
+    },
+    {
+      "path": "frontend/src/components/ai/AISettingsProvidersSection.css",
+      "baseline_sha256": "8a05d8996bee9514b3ae2914d834e4daad4bb0f09aa207c5d702d2b65ae2b5fe",
+      "current_sha256": "3b4eb9914103aaeb5cebe480af89409efc0e547afadac755e6efc49f7848fd37",
+      "new_whitespace_warnings": 0
+    },
+    {
+      "path": "frontend/src/components/ai/AISettingsProvidersSection.mounted.test.tsx",
+      "baseline_sha256": "4e34b91bf520f3746a95884f870d98553e1855b15bdcf97d65592729b7076aaa",
+      "current_sha256": "ea4d8de1d72bc02dd686e4a51415c36c69aaf7163c5e6ed4f8349f0a7d7263d0",
+      "new_whitespace_warnings": 0
+    },
+    {
+      "path": "frontend/src/components/ai/AISettingsProvidersSection.tsx",
+      "baseline_sha256": "7d9476eb71d2ce6afba78809f4d399c194732d1f40f832ebdc1a28ce336ddafa",
+      "current_sha256": "cd986a66e37d53ba1f3f7d4236907fa1e0f6ab0c2a76a8e2e6d77bd0f5da16d3",
+      "new_whitespace_warnings": 0
+    },
+    {
+      "path": "frontend/src/components/ai/useAIProviderLayout.ts",
+      "baseline_sha256": "7d03a9db5f50808fa94a9684aeaa90af5710990856a8d95105b3e0ca0e0529e0",
+      "current_sha256": "a92ee22979699f41a988e2fcd221a7852fa6a571835cbfdfa2772877f1346c7a",
+      "new_whitespace_warnings": 0
+    },
+    {
+      "path": "shared/i18n/de-DE.json",
+      "baseline_sha256": "0bac88ef8aff112319e5fc54b5db5aad7ab2e203244a14b041547753ae9eb81a",
+      "current_sha256": "bb3093351d1f1da915a2e0c0b542f1f6fd2bd4811ae64b2632a88559c0497da0",
+      "new_whitespace_warnings": 0
+    },
+    {
+      "path": "shared/i18n/en-US.json",
+      "baseline_sha256": "a3b52923870aa70b3888f021dc4acb91a15dc854030e178dbc596bbc7e7b44be",
+      "current_sha256": "1d69befad10183cd394a517803c11c96a4f6429d0acf207b024a6d4f1bb5be37",
+      "new_whitespace_warnings": 0
+    },
+    {
+      "path": "shared/i18n/ja-JP.json",
+      "baseline_sha256": "816a493b181b6b294618826a3d1a3bad10e7e19aba55351d368af4df1615a902",
+      "current_sha256": "a28402127ccd1ddd11c165774c887fab11ea1d0f427bce19f8e1d0002e096e10",
+      "new_whitespace_warnings": 0
+    },
+    {
+      "path": "shared/i18n/ru-RU.json",
+      "baseline_sha256": "78360ebaabb1a38aa088ca408e44c2ce46991396cc85cd4ecbc996e60c85531b",
+      "current_sha256": "6b727473fe113a68ef6b186ab928e678b12844b779a2f90ad589aa60aa714203",
+      "new_whitespace_warnings": 0
+    },
+    {
+      "path": "shared/i18n/zh-CN.json",
+      "baseline_sha256": "ebf8667073bfa3218293c145938cab3d34fe3b4b5615bb292caf26527ced26d9",
+      "current_sha256": "9cf108c57e9da0e0e9fdef952b370f11e0263ca8438020c34c77361208e6a736",
+      "new_whitespace_warnings": 0
+    },
+    {
+      "path": "shared/i18n/zh-TW.json",
+      "baseline_sha256": "368a8a611bca0a06eccb73fea6da07bd1eadf9f8bab5b0fea6f493194101cdde",
+      "current_sha256": "382d46db7cdf7f31a15dd34f196286024d77c52ec467edff00b93e348301e1a3",
+      "new_whitespace_warnings": 0
+    }
+  ],
+  "missing_files": [],
+  "existing_r8_sha256": "6e3544da30d2f994e9f01433b7448749020a1448f9193cf844e64e00d34d1dee",
+  "new_whitespace_warnings": 0,
+  "excluded": "Independent preview, production configuration, backend, bindings, global rules, credentials and .codemark are not task write targets"
+}

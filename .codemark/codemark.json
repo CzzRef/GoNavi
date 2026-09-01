@@ -1,0 +1,17 @@
+{
+    "nodes": {
+        "root": {
+            "type": "group",
+            "uuid": "root",
+            "name": "CodeMarks",
+            "createdAt": 1788163326507,
+            "modifiedAt": 1788163326507
+        }
+    },
+    "children": {
+        "root": []
+    },
+    "roots": [
+        "root"
+    ]
+}

@@ -1,0 +1,134 @@
+{
+  "round": "r9-provider-candidate-visibility",
+  "verified_at": "2026-08-31T21:54:40+08:00",
+  "branch": "czz-dev",
+  "head": "4cc7493c91bf14bfbd601e483e98b7f8ba74c7c1",
+  "scope": "Actual application UI only; hide/restore supplier presets using local layout preferences",
+  "frontend": {
+    "passed": 208,
+    "failed": 0,
+    "files": 15,
+    "test_files": [
+      "frontend/src/i18n/catalogIntegrity.test.ts",
+      "frontend/src/components/AISettingsModal.async.test.tsx",
+      "frontend/src/utils/aiProviderEditorState.test.ts",
+      "frontend/src/utils/aiProviderEndpoints.test.ts",
+      "frontend/src/utils/aiProviderManagement.test.ts",
+      "frontend/src/utils/aiProviderPresets.test.ts",
+      "frontend/src/utils/aiSettingsLeaveGuard.test.ts",
+      "frontend/src/utils/providerSecretDraft.test.ts",
+      "frontend/src/components/ai/AIChatProviderModelSelect.i18n.test.tsx",
+      "frontend/src/components/ai/AIChatProviderModelSelect.test.tsx",
+      "frontend/src/components/ai/AIProviderModelSelect.test.tsx",
+      "frontend/src/components/ai/AISettingsProvidersSection.mounted.test.tsx",
+      "frontend/src/components/ai/AISettingsProvidersSection.test.tsx",
+      "frontend/src/components/ai/AISettingsSidebar.test.tsx",
+      "frontend/src/components/ai/aiSettingsModalConfig.test.tsx"
+    ]
+  },
+  "typescript": {
+    "check": "tsc --noEmit",
+    "exit_code": 0,
+    "rerun_after_final_source_edits": true
+  },
+  "go_i18n": {
+    "top_level_passed": 3,
+    "failed": 0
+  },
+  "browser": {
+    "profile": "Default",
+    "data": "Synthetic providers through the unchanged development mock bridge",
+    "checks_file": "browser-checks.json",
+    "viewport_sizes": [
+      [
+        1440,
+        980
+      ],
+      [
+        760,
+        680
+      ]
+    ],
+    "themes": [
+      "light",
+      "dark"
+    ],
+    "screenshots_visually_reviewed": true,
+    "provider_mutation_calls": 0,
+    "runtime_error_count": 0,
+    "native_keyboard": "not_run"
+  },
+  "native_build": {
+    "exit": 0,
+    "elapsed_seconds": 44.754,
+    "platform": "darwin/arm64",
+    "path": "/Users/gdkmjd/work/czz/GitFork/GoNavi/build/bin/GoNavi-provider-settings-260831-r9",
+    "bytes": 99901970,
+    "sha256": "42bd1d99a1c8ab0630ba928d385e8810cd9da8f56a09b5b755796882598d4383",
+    "launched": false
+  },
+  "review": {
+    "baseline_files": 64,
+    "changed_code_and_doc_paths": 11,
+    "byte_unchanged_files": 53,
+    "new_whitespace_warnings": 0,
+    "existing_r8_unchanged": true,
+    "details": "incremental-review.json"
+  },
+  "document_impact": {
+    "classification": "task/project-current",
+    "owner": "czz-docs/ai-provider-management-task-card.md",
+    "status": "synchronized",
+    "relative_links_checked": 18,
+    "broken_links": 0
+  },
+  "cleanup": {
+    "owned_browser_space_closed": true,
+    "owned_vite_5186_stopped": true,
+    "synthetic_hidden_preferences_cleared": true,
+    "independent_preview_49787_untouched": true,
+    "user_application_processes_untouched": true
+  },
+  "acceptance": {
+    "source_and_offline_regressions": "accepted",
+    "real_desktop": "not_run",
+    "real_cli_login_or_model_response": "not_run",
+    "windows_linux_hardware": "not_run",
+    "performance_measurements": "not_run",
+    "backend_race_tests_this_round": "not_rerun; unchanged from r8",
+    "deployed_or_installed": false,
+    "committed_or_pushed": false
+  },
+  "evidence_files": [
+    {
+      "path": "build/evidence/ai-provider-management-r9/browser-checks.json",
+      "bytes": 4265,
+      "sha256": "469ae2a83e3b013f2eca713b2769bf21861d02845e7111041df4dd3bd3c62c0b"
+    },
+    {
+      "path": "build/evidence/ai-provider-management-r9/desktop-dark.png",
+      "bytes": 360104,
+      "sha256": "f0c8be314c4270d15296b174538cb4b7908bd94957291781f5d19c8ffc901818"
+    },
+    {
+      "path": "build/evidence/ai-provider-management-r9/desktop-light.png",
+      "bytes": 361753,
+      "sha256": "c44b1c23e26c4a38a2508db0bb15aed5f831e0c16cc2d24fed33f384b8bebd88"
+    },
+    {
+      "path": "build/evidence/ai-provider-management-r9/incremental-review.json",
+      "bytes": 3633,
+      "sha256": "7b30dd6ec1a55ea2a2ca64608c4789ec31c7dc63fad70eecbaed1d64910cf3d1"
+    },
+    {
+      "path": "build/evidence/ai-provider-management-r9/narrow-light.png",
+      "bytes": 93892,
+      "sha256": "6a1628715cd067e22c7b781f86e8ae0dbb6d65e862e648c7d4756206ae85496e"
+    },
+    {
+      "path": "build/evidence/ai-provider-management-r9/narrow-restored-light.png",
+      "bytes": 219086,
+      "sha256": "f15197105d72e58baf7b461f91dc06bfa5c81d7306f629d1d2d73962eab2a228"
+    }
+  ]
+}

@@ -1,0 +1,249 @@
+{
+  "branch": "czz-dev",
+  "head": "4cc7493c91bf14bfbd601e483e98b7f8ba74c7c1",
+  "baseline_files": 50,
+  "missing_baseline_files": [],
+  "baseline_unchanged": 30,
+  "changed_this_round": 34,
+  "files": [
+    {
+      "path": "frontend/src/App.tsx",
+      "numstat": [
+        "60",
+        "45"
+      ]
+    },
+    {
+      "path": "frontend/src/components/AISettingsModal.tsx",
+      "numstat": [
+        "150",
+        "20"
+      ]
+    },
+    {
+      "path": "frontend/src/components/ai/AIChatProviderModelSelect.tsx",
+      "numstat": [
+        "5",
+        "3"
+      ]
+    },
+    {
+      "path": "frontend/src/components/ai/AISettingsProvidersSection.test.tsx",
+      "numstat": [
+        "11",
+        "11"
+      ]
+    },
+    {
+      "path": "frontend/src/components/ai/AISettingsProvidersSection.tsx",
+      "numstat": [
+        "237",
+        "278"
+      ]
+    },
+    {
+      "path": "frontend/src/types.ts",
+      "numstat": [
+        "3",
+        "0"
+      ]
+    },
+    {
+      "path": "frontend/wailsjs/go/models.ts",
+      "numstat": [
+        "4",
+        "1"
+      ]
+    },
+    {
+      "path": "internal/ai/provider/codebuddy_cli.go",
+      "numstat": [
+        "4",
+        "4"
+      ]
+    },
+    {
+      "path": "internal/ai/provider/codebuddy_cli_test.go",
+      "numstat": [
+        "2",
+        "2"
+      ]
+    },
+    {
+      "path": "internal/ai/service/provider_secret_test.go",
+      "numstat": [
+        "24",
+        "6"
+      ]
+    },
+    {
+      "path": "internal/ai/service/service.go",
+      "numstat": [
+        "16",
+        "6"
+      ]
+    },
+    {
+      "path": "internal/ai/types.go",
+      "numstat": [
+        "18",
+        "15"
+      ]
+    },
+    {
+      "path": "shared/i18n/de-DE.json",
+      "numstat": [
+        "48",
+        "1"
+      ]
+    },
+    {
+      "path": "shared/i18n/en-US.json",
+      "numstat": [
+        "48",
+        "1"
+      ]
+    },
+    {
+      "path": "shared/i18n/ja-JP.json",
+      "numstat": [
+        "48",
+        "1"
+      ]
+    },
+    {
+      "path": "shared/i18n/ru-RU.json",
+      "numstat": [
+        "48",
+        "1"
+      ]
+    },
+    {
+      "path": "shared/i18n/zh-CN.json",
+      "numstat": [
+        "48",
+        "1"
+      ]
+    },
+    {
+      "path": "shared/i18n/zh-TW.json",
+      "numstat": [
+        "48",
+        "1"
+      ]
+    },
+    {
+      "path": "czz-docs/ai-provider-management-task-card.md",
+      "numstat": [
+        "65",
+        "16"
+      ]
+    },
+    {
+      "path": "frontend/src/components/AISettingsModal.async.test.tsx",
+      "numstat": [
+        "148",
+        "17"
+      ]
+    },
+    {
+      "path": "frontend/src/components/ai/AIChatProviderModelSelect.test.tsx",
+      "numstat": [
+        "27",
+        "0"
+      ]
+    },
+    {
+      "path": "frontend/src/components/ai/AIProviderModelSelect.test.tsx",
+      "numstat": [
+        "97",
+        "2"
+      ]
+    },
+    {
+      "path": "frontend/src/components/ai/AIProviderModelSelect.tsx",
+      "numstat": [
+        "152",
+        "9"
+      ]
+    },
+    {
+      "path": "frontend/src/components/ai/AISettingsProvidersSection.css",
+      "numstat": [
+        "132",
+        "0"
+      ]
+    },
+    {
+      "path": "frontend/src/components/ai/AISettingsProvidersSection.mounted.test.tsx",
+      "numstat": [
+        "82",
+        "87"
+      ]
+    },
+    {
+      "path": "frontend/src/components/ai/useAIProviderLayout.ts",
+      "numstat": [
+        "81",
+        "0"
+      ]
+    },
+    {
+      "path": "frontend/src/utils/aiProviderManagement.ts",
+      "numstat": [
+        "28",
+        "0"
+      ]
+    },
+    {
+      "path": "frontend/src/utils/aiSettingsLeaveGuard.test.ts",
+      "numstat": [
+        "23",
+        "0"
+      ]
+    },
+    {
+      "path": "frontend/src/utils/aiSettingsLeaveGuard.ts",
+      "numstat": [
+        "12",
+        "0"
+      ]
+    },
+    {
+      "path": "internal/ai/provider/cli_lookup.go",
+      "numstat": [
+        "6",
+        "4"
+      ]
+    },
+    {
+      "path": "internal/ai/provider/codebuddy_nvm_test.go",
+      "numstat": [
+        "79",
+        "0"
+      ]
+    },
+    {
+      "path": "internal/ai/service/provider_management_test.go",
+      "numstat": [
+        "2",
+        "1"
+      ]
+    },
+    {
+      "path": "internal/ai/service/provider_models.go",
+      "numstat": [
+        "49",
+        "0"
+      ]
+    },
+    {
+      "path": "internal/ai/service/provider_models_test.go",
+      "numstat": [
+        "155",
+        "0"
+      ]
+    }
+  ],
+  "whitespace_passed": true
+}

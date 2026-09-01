@@ -1,0 +1,286 @@
+{
+  "scope": "GoNavi actual components with mock Wails bridge only",
+  "url": "http://127.0.0.1:5186/",
+  "checks": {
+    "copy": {
+      "copyAdded": true,
+      "originalUnchanged": true,
+      "names": [
+        "Codex 订阅",
+        "Claude 订阅",
+        "Cursor CLI",
+        "OpenAI · 日常",
+        "OpenAI · 备用",
+        "DeepSeek",
+        "OpenAI · 研发副本 · 副本"
+      ],
+      "selectedDefault": "Codex 订阅",
+      "copyState": "已保存"
+    },
+    "leave": {
+      "confirmedLeft": true,
+      "shortcutVisible": true
+    },
+    "keyboard": {
+      "scope": "DOM keyboard event and focus behavior in actual component",
+      "escapeClosed": true,
+      "focusOnModel": true,
+      "editorKept": true,
+      "switchFocusRetained": true,
+      "rawKeyboard": {
+        "status": "not_verified",
+        "deliveryObserved": false,
+        "reason": "No keydown was observed in the target page after browser keyboard injection; native desktop keyboard acceptance remains manual"
+      }
+    },
+    "scopedTest": {
+      "button": "测试连接",
+      "result": " 本机登录检查通过 · 未验证模型响应"
+    },
+    "narrowDrawer": {
+      "open": {
+        "visible": true,
+        "width": 402,
+        "scrollable": true
+      },
+      "closed": {
+        "closed": true,
+        "focusReturned": true
+      },
+      "keyboardScope": "DOM keydown"
+    }
+  },
+  "layouts": [
+    {
+      "name": "pointer-drag",
+      "viewport": [
+        1440,
+        980
+      ],
+      "pageWidth": 1440,
+      "workspace": {
+        "width": 948,
+        "height": 340,
+        "bottom": 820
+      },
+      "editor": {
+        "width": 435,
+        "height": 340,
+        "bottom": 820
+      },
+      "catalog": {
+        "width": 496,
+        "height": 340,
+        "bottom": 820
+      },
+      "footer": {
+        "width": 435,
+        "height": 72,
+        "bottom": 820
+      },
+      "columns": "118.75px 118.75px 118.75px 118.75px",
+      "fields": "208.5px 208.5px",
+      "narrow": false,
+      "catalogScroll": true,
+      "stage": "Resize behavior before the final modal-height adjustment; final geometry is recorded separately"
+    },
+    {
+      "name": "accepted-wide",
+      "viewport": [
+        1440,
+        980
+      ],
+      "pageWidth": 1440,
+      "workspace": {
+        "width": 948,
+        "height": 491,
+        "bottom": 884
+      },
+      "editor": {
+        "width": 595,
+        "height": 491,
+        "bottom": 884
+      },
+      "catalog": {
+        "width": 336,
+        "height": 491,
+        "bottom": 884
+      },
+      "footer": {
+        "width": 595,
+        "height": 72,
+        "bottom": 884
+      },
+      "columns": "106.664px 106.664px 106.664px",
+      "fields": "182.258px 246.047px 136.695px",
+      "narrow": false,
+      "catalogScroll": true
+    },
+    {
+      "name": "verified-1100",
+      "viewport": [
+        1100,
+        800
+      ],
+      "pageWidth": 1100,
+      "workspace": {
+        "width": 756,
+        "height": 331,
+        "bottom": 704
+      },
+      "editor": {
+        "width": 756,
+        "height": 331,
+        "bottom": 704
+      },
+      "catalog": {
+        "width": 0,
+        "height": 0,
+        "bottom": 0
+      },
+      "footer": {
+        "width": 756,
+        "height": 72,
+        "bottom": 704
+      },
+      "columns": "repeat(auto-fit, minmax(min(100%, 98px), 1fr))",
+      "fields": "369px 369px 0px",
+      "narrow": false,
+      "catalogScroll": false,
+      "editorScroll": 259
+    },
+    {
+      "name": "verified-900",
+      "viewport": [
+        900,
+        700
+      ],
+      "pageWidth": 900,
+      "workspace": {
+        "width": 556,
+        "height": 231,
+        "bottom": 604
+      },
+      "editor": {
+        "width": 556,
+        "height": 231,
+        "bottom": 604
+      },
+      "catalog": {
+        "width": 0,
+        "height": 0,
+        "bottom": 0
+      },
+      "footer": {
+        "width": 556,
+        "height": 72,
+        "bottom": 604
+      },
+      "columns": "repeat(auto-fit, minmax(min(100%, 98px), 1fr))",
+      "fields": "269px 269px",
+      "narrow": true,
+      "catalogScroll": false,
+      "editorScroll": 159
+    },
+    {
+      "name": "verified-760",
+      "viewport": [
+        760,
+        680
+      ],
+      "pageWidth": 760,
+      "workspace": {
+        "width": 416,
+        "height": 211,
+        "bottom": 584
+      },
+      "editor": {
+        "width": 416,
+        "height": 211,
+        "bottom": 584
+      },
+      "catalog": {
+        "width": 0,
+        "height": 0,
+        "bottom": 0
+      },
+      "footer": {
+        "width": 416,
+        "height": 72,
+        "bottom": 584
+      },
+      "columns": "repeat(auto-fit, minmax(min(100%, 98px), 1fr))",
+      "fields": "199px 199px",
+      "narrow": true,
+      "catalogScroll": false,
+      "editorScroll": 139
+    },
+    {
+      "viewport": [
+        1440,
+        980
+      ],
+      "pageWidth": 1440,
+      "workspace": {
+        "width": 948,
+        "height": 491,
+        "bottom": 884
+      },
+      "editor": {
+        "width": 595,
+        "height": 491,
+        "bottom": 884
+      },
+      "catalog": {
+        "width": 336,
+        "height": 491,
+        "bottom": 884
+      },
+      "footer": {
+        "width": 595,
+        "height": 72,
+        "bottom": 884
+      },
+      "columns": "106.664px 106.664px 106.664px",
+      "fields": "182.258px 246.047px 136.695px",
+      "narrow": false,
+      "catalogScroll": true,
+      "name": "final-wide"
+    },
+    {
+      "viewport": [
+        760,
+        680
+      ],
+      "pageWidth": 760,
+      "workspace": {
+        "width": 416,
+        "height": 211,
+        "bottom": 584
+      },
+      "editor": {
+        "width": 416,
+        "height": 211,
+        "bottom": 584
+      },
+      "catalog": {
+        "width": 0,
+        "height": 0,
+        "bottom": 0
+      },
+      "footer": {
+        "width": 416,
+        "height": 72,
+        "bottom": 584
+      },
+      "columns": "repeat(auto-fit, minmax(min(100%, 98px), 1fr))",
+      "fields": "199px 199px",
+      "narrow": true,
+      "catalogScroll": false,
+      "name": "final-narrow"
+    }
+  ],
+  "mcpProbeCalls": 0,
+  "scriptErrors": 0,
+  "keyboardScope": "DOM keyboard events and focus verified; raw/native key delivery not verified"
+}

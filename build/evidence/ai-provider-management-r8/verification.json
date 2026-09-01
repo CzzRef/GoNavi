@@ -1,0 +1,156 @@
+{
+  "version": "provider-settings-r8",
+  "branch": "czz-dev",
+  "head": "4cc7493c91bf14bfbd601e483e98b7f8ba74c7c1",
+  "frontend": {
+    "passed": true,
+    "tests": 204,
+    "files": 15
+  },
+  "backend": [
+    {
+      "scope": "provider service",
+      "top_level_tests": 27,
+      "including_subtests": 44,
+      "packages": [
+        "GoNavi-Wails/internal/ai/service"
+      ],
+      "race_detector": true,
+      "passed": true
+    },
+    {
+      "scope": "CLI process fixtures",
+      "top_level_tests": 52,
+      "including_subtests": 88,
+      "packages": [
+        "GoNavi-Wails/internal/ai/provider"
+      ],
+      "race_detector": true,
+      "passed": true
+    },
+    {
+      "scope": "locale catalogs",
+      "top_level_tests": 2,
+      "including_subtests": 2,
+      "packages": [
+        "GoNavi-Wails/shared/i18n"
+      ],
+      "race_detector": false,
+      "passed": true
+    }
+  ],
+  "typescript_and_frontend_build": {
+    "passed": true,
+    "scope": "tsc and Vite production build within the native build"
+  },
+  "native_build": {
+    "exit": 0,
+    "elapsed_seconds": 40.689,
+    "platform": "darwin/arm64",
+    "path": "/Users/gdkmjd/work/czz/GitFork/GoNavi/build/bin/GoNavi-provider-settings-260831-r8",
+    "bytes": 99901970,
+    "sha256": "6e3544da30d2f994e9f01433b7448749020a1448f9193cf844e64e00d34d1dee",
+    "launched": false
+  },
+  "browser": {
+    "scope": "Actual product components with mock Wails bridge and fixture configurations",
+    "page": "http://127.0.0.1:5186/",
+    "script_errors": 0,
+    "keyboard_scope": "DOM keyboard events and focus verified; raw/native key delivery not verified",
+    "report": "browser-checks.json",
+    "screenshots": [
+      "desktop-1440-light.png",
+      "editor-1440-dark.png",
+      "narrow-760-light.png"
+    ]
+  },
+  "compatibility": {
+    "baseline_files_preserved": 50,
+    "unchanged_baseline_files": 30,
+    "incremental_whitespace_passed": true
+  },
+  "not_run": [
+    "r8 desktop launch and manual interaction",
+    "native desktop keyboard input",
+    "real installed CLI login or model response checks in this round",
+    "Windows and Linux hardware validation",
+    "cold and warm loading measurements"
+  ],
+  "unchanged_boundaries": [
+    "installed GoNavi application",
+    "real database and paid model messages",
+    "CLI login, global PATH and shim configuration",
+    "git commit and remote push"
+  ],
+  "source_sha256": {
+    "frontend/src/App.css": "a15a1b5286e009b842ef6ff3e2eb425917cc2ad2579b025bad702e864be6fc7c",
+    "frontend/src/App.tsx": "6f027040b546e3824ca60797b81584e63c4bd0006359237840bf95db9d4aa300",
+    "frontend/src/components/AISettingsModal.async.test.tsx": "fdb145eda9c6f1e6c5dc38ebbb69f9275a43f21b0872ae5bcd4e7b2c40ea7f8d",
+    "frontend/src/components/AISettingsModal.tsx": "565188d89be004042e3d915cc949844f7e3697a18ef80c531abba7bb8552296e",
+    "frontend/src/components/ai/AIChatProviderModelSelect.test.tsx": "0717a3f66f96b314056bd050b33618e3376b0be087fedf6219ba948adb7d7790",
+    "frontend/src/components/ai/AIChatProviderModelSelect.tsx": "a94a5d2a2992ab7efbe69d19dcc4a12aa4a98e2b98fffdc77732a6aab90f722a",
+    "frontend/src/components/ai/AIProviderConnectionGuide.tsx": "2069b06cfa6190c48d92d8df4a9d20169640afe71897b6ed95c5e900e00b3349",
+    "frontend/src/components/ai/AIProviderModelSelect.test.tsx": "6eb78b2449d55852e6dd03299bbd83f8f86206e0dec2400afab41a464764989f",
+    "frontend/src/components/ai/AIProviderModelSelect.tsx": "c41229d25556f8387adec3d607acfaabc9d0df0abfc8d946d342bee2dd542412",
+    "frontend/src/components/ai/AISettingsProvidersSection.css": "8a05d8996bee9514b3ae2914d834e4daad4bb0f09aa207c5d702d2b65ae2b5fe",
+    "frontend/src/components/ai/AISettingsProvidersSection.mounted.test.tsx": "4e34b91bf520f3746a95884f870d98553e1855b15bdcf97d65592729b7076aaa",
+    "frontend/src/components/ai/AISettingsProvidersSection.test.tsx": "7e7142361aeb3bd040882b5536a76ad63c1a7003862e3c874b7bf3ab8d3a81dd",
+    "frontend/src/components/ai/AISettingsProvidersSection.tsx": "7d9476eb71d2ce6afba78809f4d399c194732d1f40f832ebdc1a28ce336ddafa",
+    "frontend/src/components/ai/AISettingsSidebar.test.tsx": "c8c106dffce267931c3d83995cf825d7486c3572b4e10d05b5770f25cb2aabe2",
+    "frontend/src/components/ai/AISettingsSidebar.tsx": "ad1b779e2115e610ee9a642d5e4126027eb4a38b0321c5ac91b7893e6317698b",
+    "frontend/src/components/ai/aiSettingsModalConfig.test.tsx": "6a872f188584ee4aa7ce7a096c681f144795f09526ac7755c51e2cce9d45d13f",
+    "frontend/src/components/ai/aiSettingsModalConfig.tsx": "f8a71ed0ccec63cc3ea9a7af5550770778c071b49e0211fb01347a82b88a538b",
+    "frontend/src/components/ai/useAIProviderLayout.ts": "7d03a9db5f50808fa94a9684aeaa90af5710990856a8d95105b3e0ca0e0529e0",
+    "frontend/src/main.tsx": "c4d21b55d47574d766f0572c74ff0dc261a74fdcbaee510f7f7b00c117ebea1c",
+    "frontend/src/types.ts": "c6250823f64dafd1872f61fefeda58e7898776d5b5ae0a75806a73779219fe9a",
+    "frontend/src/utils/aiProviderEndpoints.test.ts": "45ee9bd6e0a3cd381c8fefbb9184e84cd4bc914f8d68a0742c24c940f21debf9",
+    "frontend/src/utils/aiProviderEndpoints.ts": "7405e4081076939a23fca79d9027a57a41d9b1392d835271eca58effd9858089",
+    "frontend/src/utils/aiProviderManagement.test.ts": "834945a0242132e380a13003810c9c8da01b0f2400b2f1892ac2c285c070b5eb",
+    "frontend/src/utils/aiProviderManagement.ts": "bd2b67a09a7baba8116bd9bc2c32c3658b1d412ae6b2b2b35805a597b3fda625",
+    "frontend/src/utils/aiProviderPresets.test.ts": "440b3053f671aa38b2d0a638190d83b759a2cc8e1d52fec9951dc4834e80d43d",
+    "frontend/src/utils/aiProviderPresets.ts": "afd482782dd9a76c756e07ef0591ce5f76fa2b49db9bdb1f25cf0106295385c8",
+    "frontend/src/utils/aiSettingsLeaveGuard.test.ts": "e99633831ed411f74dd7b089a3c9e0f0f7d0106e7538dd9a3e3a0b301b680621",
+    "frontend/src/utils/aiSettingsLeaveGuard.ts": "d5193d37710dd72cd48fbc1150d66fb2108fce8f61f81ec962ce5ec20ef7cce0",
+    "frontend/wailsjs/go/aiservice/Service.d.ts": "8202f68a25bbdf45942a05248584ca339b06053e76bac9eeaf3e61433912bc04",
+    "frontend/wailsjs/go/aiservice/Service.js": "468e3a19c86cb9fe9359c98ba87ab08b52454925a875af545c5d7bcb19de4a22",
+    "frontend/wailsjs/go/models.ts": "bca2077fa57297d1eb09e544f575b59a2b0698b47b3902cbca851a76867dc7fc",
+    "internal/ai/provider/claude_cli.go": "724d9069d0546054f4aa95e179fc75f31a918fe0683eefb8ae2e487a197a3135",
+    "internal/ai/provider/cli_capabilities.go": "d9742a99fd208a743618b26a64fb3b2348d5f91410f868add2f6f314a968cff1",
+    "internal/ai/provider/cli_lookup.go": "494f7f53b98bf041f1f1dffe9a2d7fe46c3d74699bac0e887d51d5b8edf2296e",
+    "internal/ai/provider/cli_lookup_test.go": "877d665fb70007f793f4dad91df9b4ee25973a46bb6b881fc0f86969ea1a9a10",
+    "internal/ai/provider/cli_model_catalog.go": "960a4edb66772ca466fb078cc52137961cca015b198ffad92431a0483140b7fc",
+    "internal/ai/provider/cli_model_catalog_test.go": "dd50d0cfae71fb26e8bfa0ea962646d04c40ac45ba258eecbae5d42032f9b966",
+    "internal/ai/provider/codebuddy_cli.go": "f61996da9fc9dc5847e9b7a781965fc62cd5ff184a7dc194ed298e99b292fd2a",
+    "internal/ai/provider/codebuddy_cli_test.go": "a6b4963bf81c3ceedc3c5ea2794698e3439f453ac5a3e759595fb7a6349140ce",
+    "internal/ai/provider/codebuddy_nvm_test.go": "a4c22ebb5d9137b6a9e8d28fb3b1973806fcd713ea890a8723c8b4f1a3afd261",
+    "internal/ai/provider/codex_cli.go": "961a32d86617ad48de5861dd20b690d70f898a27e413c5c2ba4c5cff851aa8e1",
+    "internal/ai/provider/codex_cli_test.go": "61b27d9044edfba23d3618e395196f8f2fd0fc9adc4d22f5d22dcd898c860f91",
+    "internal/ai/provider/cursor_cli.go": "d2f06b968ba3b25d9bca72052ba38d0816a4e07ac269f81494abab07c33ad6fb",
+    "internal/ai/provider/cursor_cli_test.go": "0cbb75e2cb83abe9b36bc19ba44fce7999829020110c9f26ccdfcacbf9d048ff",
+    "internal/ai/provider/custom.go": "bf0be3e6a8e51ab20b9627f97965c015e10c1c0803396d7d56074a98dce1ed47",
+    "internal/ai/provider/grok_cli.go": "6f8962910e541fe61656bb81095596939a5737cf7e2c183b9f260c05ed543dce",
+    "internal/ai/provider/grok_cli_health_test.go": "68d9e86fc0ab1405b0db98e4114fe323e9d41e6eefe00fe087cad96edcc4f3f8",
+    "internal/ai/service/claude_code_mcp.go": "c9b26d7f8eab03312b4506b7573202b294ecfa943f0ce2591e0d56c7b9261f11",
+    "internal/ai/service/claude_code_mcp_test.go": "f69602938bdaefa0c236a8c2d10dd1bd5089756e6bf9460bfebf3a35e866e483",
+    "internal/ai/service/provider_management_test.go": "7679369bcc939e1f43afed262cf9bf6adc9ce5b6272ada1e24d6b6786acc4a32",
+    "internal/ai/service/provider_models.go": "86b568cc50c6a09b6eaa8ee366c8f96bff6877fc12c52d75db25a1cd8360cbe3",
+    "internal/ai/service/provider_models_test.go": "6711932affc7302007fd2d519786e004c8b4acc113bfb944aaadb476d4413fd2",
+    "internal/ai/service/provider_secret_test.go": "27b2cd5d55f99a0106bf341336c8ce414d448cc06dcc0483385bb9a48e8e4723",
+    "internal/ai/service/service.go": "56f3c0a3108c85ab63d35daab44f93c85d55fe552456dedef04abae78200da54",
+    "internal/ai/service/service_qwen_test.go": "8d2d673877488ad3fc766d33ac39c45eaa95af249ee0845b6f103513174f38e6",
+    "internal/ai/service/service_subscription_cli_test.go": "d64b1333a9146628061b708ce1fa728932acaf956ce4ca13896f1a803173bc87",
+    "internal/ai/types.go": "4c6c6208f9118d71e671c24238c266ebce79bd929d8e06c672ae32f34343b3d0",
+    "shared/i18n/de-DE.json": "0bac88ef8aff112319e5fc54b5db5aad7ab2e203244a14b041547753ae9eb81a",
+    "shared/i18n/en-US.json": "a3b52923870aa70b3888f021dc4acb91a15dc854030e178dbc596bbc7e7b44be",
+    "shared/i18n/ja-JP.json": "816a493b181b6b294618826a3d1a3bad10e7e19aba55351d368af4df1615a902",
+    "shared/i18n/ru-RU.json": "78360ebaabb1a38aa088ca408e44c2ce46991396cc85cd4ecbc996e60c85531b",
+    "shared/i18n/zh-CN.json": "ebf8667073bfa3218293c145938cab3d34fe3b4b5615bb292caf26527ced26d9",
+    "shared/i18n/zh-TW.json": "368a8a611bca0a06eccb73fea6da07bd1eadf9f8bab5b0fea6f493194101cdde"
+  },
+  "cleanup": {
+    "ego_task_space_6": "closed",
+    "vite_5186": "stopped",
+    "original_preview_49787": "not_modified",
+    "installed_application": "not_modified"
+  }
+}
