@@ -36,6 +36,26 @@ git commit
 - **`.codemark/` 与 `build/evidence/`（14 文件 +1093）** —— CodeMark 插件的本机状态与 r8/r9 的核验截图。**这两处已被并行会话提交进 `czz-dev`**，与任务卡自述的「构建目录、截图、本机证据与独立预览不纳入提交」相悖；PR 里必须排除，`czz-dev` 上是否回滚另议。
 - **`.gitignore` 与 `frontend/package.json.md5`（2 文件）** —— 前者是本机代理发现目录的忽略项，后者是 wails 生成的本机哈希，对上游都是噪声。
 
+## 3.5 测试必须随 PR 一起提，不能剥离
+
+这条曾被质疑「上游会不会不关心测试」，实测答案是相反的：
+
+- `upstream/dev` 里有 **521 个 `_test.go`** 与 **540 个 `.test.ts(x)`**；Go 源文件共 1052 个，近一半是测试。
+- `.github/workflows/backend-tests.yml` 的触发是 `on: pull_request: branches: [dev]`，步骤为 `go test ./... -count=1 -timeout=30m`。**PR 一提交，全量后端测试就跑。**
+
+剥离测试的实测后果：
+
+| 做法 | 后果 |
+| --- | --- |
+| 全部剔除测试改动 | `internal/ai/provider` 编译失败：`not enough arguments in call to buildCodexCLIEnv`。我们改了该函数签名，上游旧测试仍按旧签名调用 |
+| 只剔除新增的 18 个测试文件 | `internal/ai/service` 编译失败：`undefined: newProviderManagementTestService`。修改过的既有测试用了新文件里的共享辅助函数 |
+
+本次 72 文件里测试的构成是「新增 18 + 改动既有 12」。那 12 个不是额外负担，而是**上游自己的用例因源码契约变化必须同步修改**；删掉它们等于把上游测试留成红的。
+
+真正该剔除的是**不适合上游的测试**，本次剔了一条：读 `.css` 文本并断言 `left: 31px` 等像素字面量的用例。它绕开了仓库 `testPolicy` 守卫的正则（只匹配 `.ts/.tsx`），却会因任何一次样式格式化而误报。
+
+想缩小 PR 时，正确手段是**按主题拆成多个各自带测试的 PR**，不是抽走测试。
+
 ## 4. 两个混主题文件的拆分
 
 这两个文件同时承载供应商与 SQL 两个主题，必须按 hunk 取舍，不能整份保留或整份排除：
@@ -58,7 +78,7 @@ git commit
 
 ## 6. PR 分支上的核验（2026-09-01）
 
-在 `feat/ai-provider-management` 上实测，不是在 `czz-dev` 上：
+在 `feat/ai-provider-management-v2` 上实测，不是在 `czz-dev` 上：
 
 | 项目 | 结果 |
 | --- | --- |
@@ -67,12 +87,21 @@ git commit
 | `go test ./internal/ai/... ./internal/mcpserver/` | 全部通过 |
 | `go test ./internal/app/` | 仅 `TestFetchReleaseByURLFallsBackToCacheOn403` 失败，属项目入口已记录的预存在失败（5 个测试共享 `updateReleaseCache` 全局状态） |
 | `npx tsc --noEmit` | 退出码 0 |
-| `npx vitest run` | 5035/5037，与 `czz-dev` 完全一致；两条失败在基线分支上同样复现 |
+| `npx vitest run` | 5035/5037，与 `czz-dev` 完全一致；两条失败在基线分支上同样复现，其中 `testPolicy` 标记的两个违规文件是上游自己的 |
 | 密钥/个人路径扫描 | 未检出令牌、私钥或 `/Users/...` 绝对路径 |
 | 新增 `TODO` / `FIXME` / `console.log` | 0 处 |
 
-## 7. 尚未做的
+## 7. PR 现状
 
-- **未推送**，也未创建 PR。推送目标应为 `origin`（`CzzRef/GoNavi`）的 `feat/ai-provider-management`，PR base 为 `Syngnat/GoNavi` 的 `dev`。
-- `frontend/wailsjs/` 三个生成文件带 −330 行重排，上游通常自行生成，是否包含值得在开 PR 前单独确认。
+| PR | 分支 | 状态 | 说明 |
+| --- | --- | --- | --- |
+| [#1130](https://github.com/Syngnat/GoNavi/pull/1130) | `feat/ai-provider-management` | 已关闭 | 首版，72 文件 +9097/−1422。因测试范围需重新界定而关闭 |
+| [#1131](https://github.com/Syngnat/GoNavi/pull/1131) | `feat/ai-provider-management-v2` | 开启中 | 72 文件 +9087/−1422，`MERGEABLE`。与首版只差 §3.5 里剔掉的那条脆弱用例，−10 行 |
+
+两条分支都保留，不删除也不 force-push：#1130 的历史与讨论完整可对照。
+
+## 8. 尚未做的
+
+- `frontend/wailsjs/` 三个生成文件带 −330 行重排，上游通常自行生成，是否包含仍待确认。
 - SQL 例程安全的独立 PR 未建分支。
+- 若上游在评审期间前进，#1131 需按 §2 的步骤重做压平并 force-push，或另起 `-v3`。

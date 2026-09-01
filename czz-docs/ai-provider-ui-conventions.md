@@ -62,4 +62,6 @@
 
 - 组件里新增 antd 组件或 `@ant-design/icons` 图标，要同步补进各测试文件的 `vi.mock` 导出表，否则整个文件会以 `No "X" export is defined` 集体失败。
 - 需要断言的浮层内容（`Tooltip` 的 `title`、`Popconfirm` 的 `onConfirm`）在 mock 里保留为可寻址元素，不要简化成 `<>{children}</>`。
+- **测试随改动一起提，不单独剥离。** 上游有 521 个 `_test.go` 与 540 个 `.test.ts(x)`，且 PR 一提交 CI 就跑 `go test ./...`；改了函数签名却不同步既有测试，会直接编译失败。缩小 PR 的正确手段是按主题拆分，不是抽走测试。细节见 [upstream-pr-scope.md](upstream-pr-scope.md) §3.5。
+- **不要把样式表当字符串断言。** 读 `.css` 文本去断言 `left: 31px` 这类像素字面量，会因任何一次格式化而误报；它还绕开了仓库 `testPolicy` 守卫（其正则只匹配 `.ts/.tsx`）。要验位置就渲染后断言类名或计算值。
 - **DOM 行为抽成纯函数再测。** `react-test-renderer` 没有真实 DOM，滚动、测量类逻辑要抽出可注入容器的纯函数（如 `revealFirstErrorIn`），在单元层覆盖调用形状与边界；纯 CSS 数值不适合写断言，应明确标为待实机确认。

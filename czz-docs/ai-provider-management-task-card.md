@@ -81,7 +81,7 @@ Grok 未安装、未登录、空输出、零退出拒绝、非零退出和超时
 
 保存动作在同一轮合并为下拉按钮：保存是主按钮，另存为收进下拉；单例 CLI 预设直接不渲染下拉，因为它复用同一份本机登录，复制第二份没有意义。原本只在悬浮提示里出现的复制说明改为菜单项内的次级文案。
 
-上游 PR 的范围、排除项与拆分障碍单独记在 [upstream-pr-scope.md](upstream-pr-scope.md)；截至本轮未建立 PR 分支，也未推送。
+上游 PR 的范围、排除项、测试口径与拆分障碍单独记在 [upstream-pr-scope.md](upstream-pr-scope.md)。已向 `Syngnat/GoNavi` 的 `dev` 提出 [#1131](https://github.com/Syngnat/GoNavi/pull/1131)（72 文件 +9087/−1422）；首版 [#1130](https://github.com/Syngnat/GoNavi/pull/1130) 因测试范围需重新界定已关闭，两条分支均保留。
 
 本轮沉淀出两份规则正文，改动供应商设置页前应先读：产物轮次、打包四键与停旧起新的操作口径在 [gonavi-verify-build-restart.md](gonavi-verify-build-restart.md)；悬浮提示、滚动定位、弹窗几何、破坏性操作、渲染性能、断点与命名等界面约定在 [ai-provider-ui-conventions.md](ai-provider-ui-conventions.md)。两者均不随上游 PR 提交。
 
