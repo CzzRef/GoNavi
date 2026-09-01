@@ -1,4 +1,5 @@
 import React from 'react';
+import { readFileSync } from 'node:fs';
 import { Form } from 'antd';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
@@ -59,14 +60,14 @@ const REQUIRED_PROVIDER_FORM_KEYS = [
   'ai_settings.action.connection_ok',
 ] as const;
 
-const providerPresets = [
-  { key: 'openai', label: 'OpenAI', icon: <span>O</span>, desc: 'GPT', defaultBaseUrl: 'https://api.openai.com/v1' },
-  { key: 'deepseek', label: 'DeepSeek', icon: <span>D</span>, desc: 'DeepSeek', defaultBaseUrl: 'https://api.deepseek.com' },
-  { key: 'codex', label: 'Codex Subscription', icon: <span>X</span>, desc: 'Codex CLI', defaultBaseUrl: '', authMode: 'local-cli' as const },
-  { key: 'claude-subscription', label: 'Claude Subscription', icon: <span>A</span>, desc: 'Claude Code CLI', defaultBaseUrl: '', authMode: 'local-cli' as const },
-  { key: 'codebuddy', label: 'CodeBuddy', icon: <span>B</span>, desc: 'CodeBuddy CLI', defaultBaseUrl: '' },
-  { key: 'cursor', label: 'Cursor', icon: <span>R</span>, desc: 'Cursor API', defaultBaseUrl: 'https://api.cursor.com/v1' },
-  { key: 'custom', label: '自定义', icon: <span>C</span>, desc: '自定义接口', defaultBaseUrl: 'https://example.com' },
+const providerPresets: React.ComponentProps<typeof AISettingsProvidersSection>['providerPresets'] = [
+  { key: 'openai', backendType: 'openai', label: 'OpenAI', icon: <span>O</span>, desc: 'GPT', defaultBaseUrl: 'https://api.openai.com/v1' },
+  { key: 'deepseek', backendType: 'openai', label: 'DeepSeek', icon: <span>D</span>, desc: 'DeepSeek', defaultBaseUrl: 'https://api.deepseek.com' },
+  { key: 'codex', backendType: 'custom', fixedApiFormat: 'codex-cli', label: 'Codex Subscription', icon: <span>X</span>, desc: 'Codex CLI', defaultBaseUrl: '', authMode: 'local-cli' },
+  { key: 'claude-subscription', backendType: 'custom', fixedApiFormat: 'claude-cli', label: 'Claude Subscription', icon: <span>A</span>, desc: 'Claude Code CLI', defaultBaseUrl: '', authMode: 'local-cli' },
+  { key: 'codebuddy', backendType: 'custom', fixedApiFormat: 'codebuddy-cli', label: 'CodeBuddy', icon: <span>B</span>, desc: 'CodeBuddy CLI', defaultBaseUrl: '' },
+  { key: 'cursor', backendType: 'custom', fixedApiFormat: 'cursor-agent', label: 'Cursor', icon: <span>R</span>, desc: 'Cursor API', defaultBaseUrl: 'https://api.cursor.com/v1' },
+  { key: 'custom', backendType: 'custom', label: '自定义', icon: <span>C</span>, desc: '自定义接口', defaultBaseUrl: 'https://example.com' },
 ];
 
 const provider: AIProviderConfig = {
@@ -83,6 +84,15 @@ const provider: AIProviderConfig = {
 const overlayTheme = buildOverlayWorkbenchTheme(false);
 
 describe('AISettingsProvidersSection', () => {
+
+  it('places the catalog hide control beside the icon instead of over the name', () => {
+    const css = readFileSync(new URL('./AISettingsProvidersSection.css', import.meta.url), 'utf8');
+    const rule = css.match(/\.gonavi-ai-provider-visibility \{[^}]+\}/)?.[0] || '';
+    expect(rule).toContain('left: 31px');
+    expect(rule).toContain('width: 16px');
+    expect(rule).not.toContain('bottom:');
+    expect(css).not.toMatch(/\.gonavi-ai-provider-catalog-label \{[^}]*padding-right: 20px/);
+  });
 
   it('renders providers as flat rows with a separate native selection button', () => {
     const Wrap = () => {
@@ -105,7 +115,7 @@ describe('AISettingsProvidersSection', () => {
             cardBorder="rgba(0,0,0,0.08)"
             inputBg="#fff"
             onPrimaryPasswordVisibleChange={() => {}}
-            resolveProviderPreset={() => ({ label: 'OpenAI', icon: <span>O</span> })}
+            resolveProviderPreset={() => ({ key: 'openai', label: 'OpenAI', icon: <span>O</span> })}
             resolvePresetByKey={(key) => providerPresets.find((item) => item.key === key) || providerPresets[0]}
             onAddProvider={() => {}}
             onEditProvider={() => {}}
@@ -122,13 +132,15 @@ describe('AISettingsProvidersSection', () => {
 
     const markup = renderToStaticMarkup(<Wrap />);
     expect(markup).toContain('OpenAI');
-    expect(markup).toContain('No model selected');
-    expect(markup).toContain('Add model provider');
-    expect(markup).toContain('gonavi-ai-provider-row is-active');
+    expect(markup).toContain('data-density="compact"');
+    expect(markup).toContain('Provider catalog');
+    expect(markup).not.toContain('Choose an endpoint first');
+    expect(markup).toContain('gonavi-ai-provider-row gonavi-ai-provider-chip is-active');
     expect(markup).toContain('gonavi-ai-provider-select');
     expect(markup).toContain('gonavi-ai-provider-add');
-    expect(markup).toContain('<button class="gonavi-ai-provider-select" type="button" aria-pressed="true"');
-    expect(markup).toContain('border-left:3px solid');
+    expect(markup).toContain('<button class="gonavi-ai-provider-select" type="button" role="radio" aria-checked="true"');
+    expect(markup).toContain('gonavi-ai-provider-chips');
+    expect(markup).toContain('Default AI provider');
   });
 
   it('renders provider form in editing mode', () => {
@@ -154,7 +166,7 @@ describe('AISettingsProvidersSection', () => {
             cardBorder="rgba(0,0,0,0.08)"
             inputBg="#fff"
             onPrimaryPasswordVisibleChange={() => {}}
-            resolveProviderPreset={() => ({ label: 'OpenAI', icon: <span>O</span> })}
+            resolveProviderPreset={() => ({ key: 'openai', label: 'OpenAI', icon: <span>O</span> })}
             resolvePresetByKey={(key) => providerPresets.find((item) => item.key === key) || providerPresets[0]}
             onAddProvider={() => {}}
             onEditProvider={() => {}}
@@ -171,17 +183,18 @@ describe('AISettingsProvidersSection', () => {
 
     const markup = renderToStaticMarkup(<Wrap />);
     expect(markup).toContain('Edit model provider');
-    expect(markup).toContain('Provider name');
-    expect(markup).toContain('SQL auto-completion');
+    expect(markup).toContain('Display name (optional)');
+    expect(markup).toContain('More settings');
     expect(markup).toContain('Auto-completion model');
     expect(markup).toContain('API Endpoint (URL)');
     expect(markup).toContain('Test connection');
-    expect(markup).toContain('OpenAI Responses');
-    expect(markup).toContain('role="radiogroup"');
-    expect(markup).toContain('role="radio" aria-checked="true"');
+    expect(markup).toContain('OpenAI Chat');
+    expect(markup).toContain('gonavi-ai-provider-add-preset-select');
+    expect(markup).toContain('role="combobox"');
+    expect(markup).not.toContain('aria-label="1 Endpoint type"');
     expect(markup).toContain('aria-label="API format"');
     expect(markup).toContain('gonavi-ai-provider-actions');
-    expect(markup).not.toContain('ant-btn-sm');
+    expect(markup).toContain('gonavi-ai-provider-save-actions');
   });
 
   it('renders the Responses protocol selector for the built-in OpenAI preset', () => {
@@ -206,7 +219,7 @@ describe('AISettingsProvidersSection', () => {
           cardBorder="rgba(0,0,0,0.08)"
           inputBg="#fff"
           onPrimaryPasswordVisibleChange={() => {}}
-          resolveProviderPreset={() => ({ label: 'OpenAI', icon: <span>O</span> })}
+          resolveProviderPreset={() => ({ key: 'openai', label: 'OpenAI', icon: <span>O</span> })}
           resolvePresetByKey={(key) => providerPresets.find((item) => item.key === key) || providerPresets[0]}
           onAddProvider={() => {}}
           onEditProvider={() => {}}
@@ -222,11 +235,10 @@ describe('AISettingsProvidersSection', () => {
 
     const markup = renderToStaticMarkup(<Wrap />);
     expect(markup).toContain('API format');
-    expect(markup).toContain('OpenAI Chat');
-    expect(markup).toContain('OpenAI Responses');
+    expect(markup).toContain('title="OpenAI Responses"');
   });
 
-  it('renders Chat and Responses protocol choices for the DeepSeek preset', () => {
+  it('preserves the selected Responses protocol for the DeepSeek preset', () => {
     const Wrap = () => {
       const [form] = Form.useForm();
       return (
@@ -248,7 +260,7 @@ describe('AISettingsProvidersSection', () => {
           cardBorder="rgba(0,0,0,0.08)"
           inputBg="#fff"
           onPrimaryPasswordVisibleChange={() => {}}
-          resolveProviderPreset={() => ({ label: 'DeepSeek', icon: <span>D</span> })}
+          resolveProviderPreset={() => ({ key: 'deepseek', label: 'DeepSeek', icon: <span>D</span> })}
           resolvePresetByKey={(key) => providerPresets.find((item) => item.key === key) || providerPresets[0]}
           onAddProvider={() => {}}
           onEditProvider={() => {}}
@@ -264,9 +276,8 @@ describe('AISettingsProvidersSection', () => {
 
     const markup = renderToStaticMarkup(<Wrap />);
     expect(markup).toContain('API format');
-    expect(markup).toContain('OpenAI Chat');
-    expect(markup).toContain('OpenAI Responses');
-    expect(markup).toContain('role="radio" aria-checked="true"');
+    expect(markup).toContain('title="OpenAI Responses"');
+    expect(markup).toContain('gonavi-ai-provider-add-preset-select');
   });
 
   it('uses catalog keys for provider list and form chrome', () => {
@@ -335,7 +346,7 @@ describe('AISettingsProvidersSection', () => {
           cardBorder="rgba(0,0,0,0.08)"
           inputBg="#fff"
           onPrimaryPasswordVisibleChange={() => {}}
-          resolveProviderPreset={() => ({ label: 'CodeBuddy', icon: <span>C</span> })}
+          resolveProviderPreset={() => ({ key: 'codebuddy', label: 'CodeBuddy', icon: <span>C</span> })}
           resolvePresetByKey={(key) => providerPresets.find((item) => item.key === key) || providerPresets[0]}
           onAddProvider={() => {}}
           onEditProvider={() => {}}
@@ -377,7 +388,7 @@ describe('AISettingsProvidersSection', () => {
           cardBorder="rgba(0,0,0,0.08)"
           inputBg="#fff"
           onPrimaryPasswordVisibleChange={() => {}}
-          resolveProviderPreset={() => ({ label: 'Cursor', icon: <span>R</span> })}
+          resolveProviderPreset={() => ({ key: 'cursor', label: 'Cursor', icon: <span>R</span> })}
           resolvePresetByKey={(key) => providerPresets.find((item) => item.key === key) || providerPresets[0]}
           onAddProvider={() => {}}
           onEditProvider={() => {}}
@@ -392,7 +403,8 @@ describe('AISettingsProvidersSection', () => {
     };
 
     const markup = renderToStaticMarkup(<Wrap />);
-    expect(markup).toContain("Optional: prefill common Cursor model IDs; leave blank to use Cursor&#x27;s default model automatically");
+    expect(markup).toContain('Favorite chat models');
+    expect(markup).toContain('Default model');
   });
 
   it('uses the local CLI login state without rendering API key or endpoint fields', () => {
@@ -425,7 +437,7 @@ describe('AISettingsProvidersSection', () => {
             cardBorder="rgba(0,0,0,0.08)"
             inputBg="#fff"
             onPrimaryPasswordVisibleChange={() => {}}
-            resolveProviderPreset={() => ({ label: 'Codex Subscription', icon: <span>X</span> })}
+            resolveProviderPreset={() => ({ key: 'codex', label: 'Codex Subscription', icon: <span>X</span> })}
             resolvePresetByKey={(key) => providerPresets.find((item) => item.key === key) || providerPresets[0]}
             onAddProvider={() => {}}
             onEditProvider={() => {}}
@@ -441,10 +453,13 @@ describe('AISettingsProvidersSection', () => {
     };
 
     const markup = renderToStaticMarkup(<Wrap />);
-    expect(markup).toContain('Local CLI sign-in');
+    expect(markup).toContain('More settings');
     expect(markup).toContain('codex login');
-    expect(markup).toContain('leave blank to let the local CLI choose automatically');
+    expect(markup).toContain('add models to switch between in chat');
     expect(markup).not.toContain('API Endpoint (URL)');
     expect(markup).not.toContain('API Key');
+    // CLI capability watches need apiFormat to remain registered even though
+    // the protocol chooser is hidden for fixed CLI presets.
+    expect(markup.match(/id="apiFormat"/g)).toHaveLength(1);
   });
 });
