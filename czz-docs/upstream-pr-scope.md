@@ -74,7 +74,7 @@ git commit
 - **例程调用**：`CALL` / `EXEC` / `EXECUTE`，以及 SQL Server 的裸过程调用。
 - **例程部署**：对 `PROCEDURE` / `FUNCTION` / `TRIGGER` / `ROUTINE` 做 `CREATE` / `ALTER` / `DROP`。
 
-该类型在**任何权限级别下都不放行**，`PermissionFull` 也不放宽，并在三个执行面同步：MCP `execute_sql`、Headless CLI、AI 对话守卫。
+该类型曾在任何权限级别下都不放行。**2026-09-01 已按产品决定回滚**：MCP / Headless / 应用按连接既有 SQL 权限执行例程，不再无条件拒绝。历史排除记录保留，避免再被拣进 PR。
 
 ## 6. PR 分支上的核验（2026-09-01）
 
@@ -113,9 +113,9 @@ git commit
 
 ## 8. 尚未做的
 
-- SQL 例程安全的独立 PR 未建分支，见 §9C。
-- `czz-dev` 尚未合并最新 `upstream/dev`（落后 8 个提交，含 #1131/#1132）。
-- 已隐藏底栏抽屉的 r45 实机观感仍待用户确认。
+- `czz-dev` 已合并最新 `upstream/dev`（`436a29c8`）。
+- 已隐藏底栏抽屉的实机观感仍待用户确认。
+- 下一份上游 PR 压平分支为 `feat/ai-provider-ui-followup`，只含 9A+9B，等明确「开 PR」再提。
 
 ## 9. #1131 合入后的下一份 PR 候选
 
@@ -126,10 +126,9 @@ git commit
 | `czz-docs/` | 本机工作文档，上游没有该目录 |
 | `.codemark/`、`build/evidence/` | 本机核验产物 |
 | `.gitignore` 的 `.agents/`、`frontend/package.json.md5` | 本机工具噪声 |
-| `frontend/src/types.ts` 的 `"routine"` hunk、SQL 例程 9 文件 | 独立主题，见 §5 / §9C |
 | `AISettingsProvidersSection.test.tsx` 读 CSS 断言 `left: 31px` | #1131 已按 §3.5 剔除，不要回流 |
 
-建议按主题拆成最多三份，都从最新 `upstream/dev`（当前 `c6fb9251`）新建压平分支，不要 `czz-dev` → `dev` 直接开 PR（会把已合入的 squash 再打一遍，并带上 SQL 与本机文档）。
+压平分支从最新 `upstream/dev`（`436a29c8`）另起，不要 `czz-dev` → `dev` 直接开 PR。
 
 ### 9A 设置页跟进（推荐下一份）
 
@@ -143,8 +142,8 @@ git commit
 
 ### 9B CLI 流式与空闲续命
 
-已提交 `caf98c1c`，8 文件：`cli_idle_watchdog.go` + 测试，以及 `codex_cli` / `cursor_cli` / `grok_cli` 的流式与超时改动。与设置页无编译耦合，可单独开。
+已提交 `caf98c1c`，8 文件：`cli_idle_watchdog.go` + 测试，以及 `codex_cli` / `cursor_cli` / `grok_cli` 的流式与超时改动。与 9A 一并进入 `feat/ai-provider-ui-followup`。
 
-### 9C SQL 例程安全
+### 9C SQL 例程安全 —— 已回滚，不进 PR
 
-仍是 §5 的独立主题。`SQLOpRoutine` 在任何权限级别下都不放行。不要和 9A/9B 混进同一份 PR。
+2026-09-01 产品决定：CodeNote「不得直接执行存储过程」约束的是 Agent 绕过产品打库；经 MCP 或 GoNavi 本身发出的语句按连接权限执行。`SQLOpRoutine` 无条件禁止已从 `czz-dev` 撤回到与 `upstream/dev` 一致，**不要再放进上游 PR**。
