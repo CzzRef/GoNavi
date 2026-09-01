@@ -93,9 +93,12 @@
 .gonavi-ai-provider-actions { flex-shrink: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; border-top: 1px solid var(--provider-line); padding: 10px 0 2px; margin-top: 0; }
 .gonavi-ai-provider-check-action { display: flex; align-items: center; gap: 8px; }
 .gonavi-ai-provider-check-action small { font-size: 10px; color: var(--provider-muted); }
-.gonavi-ai-provider-save-actions { margin-left: auto; display: flex; flex-direction: column; align-items: stretch; gap: 3px; }
-.gonavi-ai-provider-save-actions > .ant-btn { min-width: 88px; }
-.gonavi-ai-provider-save-actions .ant-btn-text { font-size: 11px; color: var(--provider-muted); height: 23px; }
+/* Save is the primary action; save-as lives in its dropdown and is absent for
+   singleton CLI presets, so the row keeps one button width either way. */
+.gonavi-ai-provider-save-actions { margin-left: auto; display: flex; align-items: center; }
+.gonavi-ai-provider-save-actions > .ant-btn, .gonavi-ai-provider-save-actions .ant-dropdown-button > .ant-btn:first-child { min-width: 88px; }
+.gonavi-ai-provider-save-as-item { display: grid; gap: 2px; max-width: 16em; }
+.gonavi-ai-provider-save-as-item > small { color: var(--provider-muted); font-size: 10px; line-height: 1.45; white-space: normal; }
 .gonavi-ai-provider-test-result { flex: 1 1 120px; min-width: 0; overflow-wrap: anywhere; color: var(--provider-muted); font-size: 11px; }
 .gonavi-ai-provider-test-result .anticon { color: var(--provider-active); }
 .gonavi-ai-provider-test-result[data-error='true'] { color: var(--gn-danger, #cf4343); }

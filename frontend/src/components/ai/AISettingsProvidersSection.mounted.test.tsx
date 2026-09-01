@@ -22,6 +22,16 @@ vi.mock('antd', () => {
     Space: ({ children, ...props }: any) => <div {...props}>{children}</div>,
     Tooltip: ({ children }: any) => <>{children}</>,
     Popconfirm: ({ children }: any) => <>{children}</>,
+    // Flatten the dropdown so its menu entries stay reachable as plain buttons.
+    Dropdown: Object.assign(({ children }: any) => <>{children}</>, {
+      Button: ({ children, menu, ...props }: any) => <>
+        <button {...props} data-dropdown-main="true">{children}</button>
+        {(menu?.items || []).map((item: any) => (
+          <button key={item.key} data-dropdown-item={item.key} disabled={item.disabled}
+            onClick={() => menu.onClick?.({ key: item.key })}>{item.label}</button>
+        ))}
+      </>,
+    }),
   };
 });
 import AISettingsProvidersSection from './AISettingsProvidersSection';
@@ -86,6 +96,44 @@ describe('provider settings mounted controls', () => {
     };
   });
   afterEach(async () => { await act(async () => { renderer?.unmount(); }); renderer = undefined; vi.unstubAllGlobals(); });
+
+  // Save-as duplicates a configuration. A singleton CLI preset reuses one machine
+  // login, so it must not offer the entry at all; multi-instance providers keep it
+  // in the save button's dropdown instead of as a second button beside it.
+  const apiPreset = { key: 'openai', label: 'OpenAI', backendType: 'openai', defaultBaseUrl: 'https://api.openai.com/v1', desc: '', icon: null };
+  const apiProvider = { id: 'c', name: 'Team key', type: 'openai', apiFormat: 'openai', model: 'gpt-4o' };
+
+  it('offers save-as inside the save dropdown for a multi-instance provider', async () => {
+    await render({
+      providerPresets: [...presets, apiPreset],
+      providers: [...props.providers, apiProvider],
+      resolveProviderPreset: (provider: any) => ({ key: provider.apiFormat === 'openai' ? 'openai' : 'grok', label: provider.apiFormat === 'openai' ? 'OpenAI' : 'Grok Subscription', icon: null }),
+      isEditing: true, editingProvider: { ...apiProvider },
+      watchedPresetKey: 'openai', watchedApiFormat: 'openai',
+      onSaveProviderAsCopy: vi.fn(),
+    });
+
+    const main = renderer!.root.findByProps({ 'data-dropdown-main': 'true' });
+    expect(renderedText(main.props.children)).toContain('Save changes');
+    const saveAs = renderer!.root.findByProps({ 'data-dropdown-item': 'save-as' });
+    const saveAsText = saveAs.findAll((node) => typeof node.props.children === 'string').map((node) => node.props.children as string);
+    expect(saveAsText).toContain('Save as');
+    // The hint that used to sit in a hover tooltip now reads inline in the menu.
+    expect(saveAsText.some((text) => text.includes('without changing the original'))).toBe(true);
+
+    await act(async () => saveAs.props.onClick());
+    expect(props.onSaveProviderAsCopy).toHaveBeenCalledTimes(1);
+    expect(props.onSaveProvider).not.toHaveBeenCalled();
+  });
+
+  it('drops the save dropdown entirely for a singleton CLI preset', async () => {
+    await render({ isEditing: true, editingProvider: { ...props.providers[1] }, onSaveProviderAsCopy: vi.fn() });
+
+    expect(renderer!.root.findAllByProps({ 'data-dropdown-main': 'true' })).toHaveLength(0);
+    expect(renderer!.root.findAllByProps({ 'data-dropdown-item': 'save-as' })).toHaveLength(0);
+    expect(renderer!.root.findAllByProps({ className: 'gonavi-ai-provider-save-actions' })).toHaveLength(1);
+    expect(props.onSaveProviderAsCopy).not.toHaveBeenCalled();
+  });
 
   it('hides candidates without changing saved providers, the current default or the editing draft', async () => {
     await render({ isEditing: true, editingProvider: { ...props.providers[1] } });

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button, Form, Input, Popconfirm, Select, Tooltip } from 'antd';
+import { Button, Dropdown, Form, Input, Popconfirm, Select, Tooltip } from 'antd';
 import { CheckOutlined, DeleteOutlined, EditOutlined, EyeInvisibleOutlined, EyeOutlined, LinkOutlined, LoadingOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons';
 import type { FormInstance } from 'antd/es/form';
 
@@ -161,6 +161,11 @@ const AISettingsProvidersSection: React.FC<AISettingsProvidersSectionProps> = ({
     return !providers.some((provider) => getSingletonCLIIdentity(provider) === identity);
   };
   const duplicateCLI = Boolean(presetFromForm && !canSelectPreset(presetFromForm, editingProvider?.id));
+  // A singleton CLI preset reuses one machine login, so a second copy would be a
+  // duplicate of the same connection. Only multi-instance providers expose the
+  // save-as entry, and it lives in the save button's dropdown rather than beside it.
+  const singletonCLIPreset = Boolean(presetFromForm && presetCLIIdentity(presetFromForm));
+  const canSaveAsCopy = Boolean(editingProvider?.id) && !singletonCLIPreset && Boolean(onSaveProviderAsCopy);
   const [search, setSearch] = React.useState('');
   const [catalogSearch, setCatalogSearch] = React.useState('');
   const [modelManagementRequest, setModelManagementRequest] = React.useState({ scope: '', request: 0 });
@@ -292,6 +297,7 @@ const AISettingsProvidersSection: React.FC<AISettingsProvidersSectionProps> = ({
     visibilityFocus.current = next ? `hidden:${next.key}` : `visible:${key}`;
     layout.setPresetHidden(key, false);
   };
+  const saveActionLabel = copy(editingProvider?.id ? 'ai_settings.provider.save_changes' : 'ai_settings.provider.action.add');
   const currentName = providers.find((provider) => provider.id === activeProviderId)?.name;
   const rootStyle = {
     '--provider-muted': overlayTheme.mutedText, '--provider-text': overlayTheme.titleText,
@@ -541,12 +547,15 @@ const AISettingsProvidersSection: React.FC<AISettingsProvidersSectionProps> = ({
             <div className="gonavi-ai-provider-test-result" role={testStatus === 'error' ? 'alert' : 'status'} data-error={testStatus === 'error'}>
               {testResult && (testResult.success ? <><CheckOutlined /> {copy(`ai_settings.test.${testResult.checkKind}`)}</> : testResult.message)}
             </div>
-            <div className="gonavi-ai-provider-save-actions"><Button size="middle" type="primary" onClick={onSaveProvider}
-              loading={loading && saveMode === 'save'} disabled={duplicateCLI || loading && saveMode === 'copy'}>{copy(editingProvider?.id ? 'ai_settings.provider.save_changes' : 'ai_settings.provider.action.add')}</Button>
-              {editingProvider?.id && <Tooltip {...hintTooltipTiming} title={presetFromForm && presetCLIIdentity(presetFromForm) ? copy('ai_settings.provider.copy_cli_unavailable') : copy('ai_settings.provider.copy_hint')}>
-                <Button type="text" size="small" onClick={onSaveProviderAsCopy} loading={loading && saveMode === 'copy'}
-                  disabled={loading || duplicateCLI || Boolean(presetFromForm && presetCLIIdentity(presetFromForm))}>{copy('ai_settings.provider.save_as')}</Button>
-              </Tooltip>}
+            <div className="gonavi-ai-provider-save-actions">{canSaveAsCopy
+              ? <Dropdown.Button size="middle" type="primary" onClick={onSaveProvider}
+                loading={loading && saveMode === 'save'} disabled={duplicateCLI || loading && saveMode === 'copy'}
+                menu={{ items: [{ key: 'save-as', label: <span className="gonavi-ai-provider-save-as-item">
+                  <span>{copy('ai_settings.provider.save_as')}</span><small>{copy('ai_settings.provider.copy_hint')}</small>
+                </span> }], onClick: () => onSaveProviderAsCopy?.() }}>
+                {saveActionLabel}</Dropdown.Button>
+              : <Button size="middle" type="primary" onClick={onSaveProvider}
+                loading={loading && saveMode === 'save'} disabled={duplicateCLI || loading && saveMode === 'copy'}>{saveActionLabel}</Button>}
             </div>
           </div>
         </Form>}
