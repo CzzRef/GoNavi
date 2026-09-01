@@ -301,12 +301,7 @@ const (
 	SQLOpQuery SQLOperationType = "query" // SELECT, SHOW, DESCRIBE, EXPLAIN
 	SQLOpDML   SQLOperationType = "dml"   // INSERT, UPDATE, DELETE
 	SQLOpDDL   SQLOperationType = "ddl"   // CREATE, ALTER, DROP, TRUNCATE
-	// SQLOpRoutine 覆盖例程调用（CALL / EXEC / SQL Server 裸过程调用）和例程部署
-	// （CREATE|ALTER|DROP PROCEDURE|FUNCTION|TRIGGER|EVENT|PACKAGE）。它的执行副作用
-	// 由例程体决定，静态判定无法界定其写入范围，因此 Agent 在任何权限级别下都不执行，
-	// 只把候选交给用户/DBA。这一禁止是无条件的，不随 SQLPermissionLevel 放宽。
-	SQLOpRoutine SQLOperationType = "routine"
-	SQLOpOther   SQLOperationType = "other"
+	SQLOpOther SQLOperationType = "other"
 )
 
 // SafetyResult 安全检查结果

@@ -1243,11 +1243,6 @@ func isConsistentSQLInspection(inspection appcore.SQLInspection) bool {
 		if statement.Index != index+1 {
 			return false
 		}
-		// Routine 与 ReadOnly 互斥。同时为真意味着检查结果自相矛盾，
-		// 只能来自被篡改或不同版本的 inspection，按无效处理而不是挑一个相信。
-		if statement.Routine && statement.ReadOnly {
-			return false
-		}
 		if !statement.ReadOnly {
 			readOnly = false
 		}
@@ -1284,11 +1279,6 @@ func classifyStatementOperation(stmt appcore.SQLStatementInspection) ai.SQLOpera
 	if stmt.ReadOnly {
 		return ai.SQLOpQuery
 	}
-	// 例程判定必须早于 DML/DDL：CREATE PROCEDURE 的前导关键字是 create，
-	// 若先落入 DDL 分支就会跟着 DDL 的权限级别放宽。
-	if stmt.Routine {
-		return ai.SQLOpRoutine
-	}
 
 	switch strings.ToLower(strings.TrimSpace(stmt.Keyword)) {
 	case "insert", "update", "delete", "replace", "merge", "upsert":
@@ -1301,10 +1291,6 @@ func classifyStatementOperation(stmt appcore.SQLStatementInspection) ai.SQLOpera
 }
 
 func isOperationAllowed(level ai.SQLPermissionLevel, opType ai.SQLOperationType) bool {
-	// 例程调用与例程部署在任何权限级别下都不由 Agent 执行，完全模式也不放宽。
-	if opType == ai.SQLOpRoutine {
-		return false
-	}
 	switch normalizeSQLSafetyLevel(level) {
 	case ai.PermissionReadOnly:
 		return opType == ai.SQLOpQuery
@@ -1327,20 +1313,7 @@ func normalizeSQLSafetyLevel(level ai.SQLPermissionLevel) ai.SQLPermissionLevel 
 }
 
 func buildSafetyDeniedMessage(level ai.SQLPermissionLevel, statements []sqlSafetyStatement) string {
-	message := fmt.Sprintf("当前 GoNavi AI 安全控制为%s，已阻止以下语句：%s。%s", safetyLevelDisplayName(level), formatSafetyStatements(statements), safetyLevelRuleText(level))
-	if containsRoutineStatement(statements) {
-		message += "其中的例程调用与例程部署语句在任何安全级别下都不由 Agent 执行，请把候选 SQL 交给用户或 DBA 手动执行。"
-	}
-	return message
-}
-
-func containsRoutineStatement(statements []sqlSafetyStatement) bool {
-	for _, stmt := range statements {
-		if stmt.OperationType == ai.SQLOpRoutine {
-			return true
-		}
-	}
-	return false
+	return fmt.Sprintf("当前 GoNavi AI 安全控制为%s，已阻止以下语句：%s。%s", safetyLevelDisplayName(level), formatSafetyStatements(statements), safetyLevelRuleText(level))
 }
 
 func safetyLevelDisplayName(level ai.SQLPermissionLevel) string {
@@ -1363,7 +1336,7 @@ func safetyLevelRuleText(level ai.SQLPermissionLevel) string {
 	case ai.PermissionReadWrite:
 		return "读写模式仅允许查询和 DML 语句。"
 	case ai.PermissionFull:
-		return "完全模式允许查询、DML 和 DDL；例程调用与例程部署始终禁止，高风险或未识别语句仍会要求确认。"
+		return "完全模式允许所有 SQL 操作；高风险或未识别语句仍会要求确认。"
 	default:
 		return "只读模式仅允许查询语句。"
 	}

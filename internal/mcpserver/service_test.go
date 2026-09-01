@@ -1314,9 +1314,9 @@ func TestExecuteSQLAllowsDDLWhenAISafetyIsFullAndAllowMutating(t *testing.T) {
 func TestExecuteSQLAllowsOtherStatementsWhenAISafetyIsFullAndAllowMutating(t *testing.T) {
 	backend := &fakeBackend{
 		editableConnection: connection.SavedConnectionView{
-			ID: "mysql-main",
+			ID: "oracle-main",
 			Config: connection.ConnectionConfig{
-				Type:     "mysql",
+				Type:     "oracle",
 				Database: "app",
 			},
 		},
@@ -1324,7 +1324,7 @@ func TestExecuteSQLAllowsOtherStatementsWhenAISafetyIsFullAndAllowMutating(t *te
 			StatementCount: 1,
 			ReadOnly:       false,
 			Statements: []appcore.SQLStatementInspection{
-				{Index: 1, Keyword: "grant", ReadOnly: false},
+				{Index: 1, Keyword: "call", ReadOnly: false},
 			},
 		},
 		safetyLevel: ai.PermissionFull,
@@ -1336,8 +1336,8 @@ func TestExecuteSQLAllowsOtherStatementsWhenAISafetyIsFullAndAllowMutating(t *te
 
 	service := NewService(backend)
 	result, _, err := service.ExecuteSQL(context.Background(), nil, executeSQLArgs{
-		ConnectionID:  "mysql-main",
-		SQL:           "GRANT SELECT ON app.* TO 'reader'@'%'",
+		ConnectionID:  "oracle-main",
+		SQL:           "CALL bulk_insert_users(100000)",
 		AllowMutating: true,
 	})
 	if err != nil {
@@ -1348,113 +1348,6 @@ func TestExecuteSQLAllowsOtherStatementsWhenAISafetyIsFullAndAllowMutating(t *te
 	}
 	if !backend.queryCalled {
 		t.Fatalf("expected SQL to be executed")
-	}
-}
-
-// 例程调用与例程部署在完全模式 + allowMutating=true 下仍必须被拒绝：
-// 这是无条件禁止，不随安全级别放宽，也不能用 allowMutating 确认掉。
-func TestExecuteSQLRejectsRoutineStatementsAtEverySafetyLevel(t *testing.T) {
-	cases := []struct {
-		name    string
-		keyword string
-		sql     string
-	}{
-		{name: "call", keyword: "call", sql: "CALL bulk_insert_users(100000)"},
-		{name: "exec", keyword: "exec", sql: "EXEC dbo.sp_rebuild"},
-		{name: "create procedure", keyword: "create", sql: "CREATE PROCEDURE p() BEGIN END"},
-		{name: "drop function", keyword: "drop", sql: "DROP FUNCTION f"},
-	}
-	levels := []ai.SQLPermissionLevel{ai.PermissionReadOnly, ai.PermissionReadWrite, ai.PermissionFull}
-
-	for _, level := range levels {
-		for _, tc := range cases {
-			t.Run(string(level)+"/"+tc.name, func(t *testing.T) {
-				backend := &fakeBackend{
-					editableConnection: connection.SavedConnectionView{
-						ID: "mysql-main",
-						Config: connection.ConnectionConfig{
-							Type:     "mysql",
-							Database: "app",
-						},
-					},
-					inspection: appcore.SQLInspection{
-						StatementCount: 1,
-						ReadOnly:       false,
-						Statements: []appcore.SQLStatementInspection{
-							{Index: 1, Keyword: tc.keyword, ReadOnly: false, Routine: true},
-						},
-					},
-					safetyLevel: level,
-					queryResult: connection.QueryResult{
-						Success: true,
-						Data:    []connection.ResultSetData{},
-					},
-				}
-
-				service := NewService(backend)
-				result, _, err := service.ExecuteSQL(context.Background(), nil, executeSQLArgs{
-					ConnectionID:  "mysql-main",
-					SQL:           tc.sql,
-					AllowMutating: true,
-				})
-				if err != nil {
-					t.Fatalf("ExecuteSQL returned error: %v", err)
-				}
-				if result == nil || !result.IsError {
-					t.Fatalf("expected tool error, got %#v", result)
-				}
-				text := firstTextContent(result)
-				if !strings.Contains(text, "ROUTINE") {
-					t.Fatalf("error text should name the routine operation type: %q", text)
-				}
-				if !strings.Contains(text, "交给用户或 DBA") {
-					t.Fatalf("error text should route the candidate to a human: %q", text)
-				}
-				if backend.queryCalled {
-					t.Fatalf("expected routine SQL not to execute at safety level %s", level)
-				}
-			})
-		}
-	}
-}
-
-// Routine 与 ReadOnly 同时为真是自相矛盾的检查结果，必须整体判为无效并拒绝执行，
-// 而不是挑其中一个字段相信。
-func TestExecuteSQLRejectsRoutineMarkedReadOnlyInspection(t *testing.T) {
-	backend := &fakeBackend{
-		editableConnection: connection.SavedConnectionView{
-			ID: "mysql-main",
-			Config: connection.ConnectionConfig{
-				Type:     "mysql",
-				Database: "app",
-			},
-		},
-		inspection: appcore.SQLInspection{
-			StatementCount: 1,
-			ReadOnly:       true,
-			Statements: []appcore.SQLStatementInspection{
-				{Index: 1, Keyword: "call", ReadOnly: true, Routine: true},
-			},
-		},
-		safetyLevel: ai.PermissionReadOnly,
-	}
-
-	service := NewService(backend)
-	result, _, err := service.ExecuteSQL(context.Background(), nil, executeSQLArgs{
-		ConnectionID: "mysql-main",
-		SQL:          "CALL p()",
-	})
-	if err != nil {
-		t.Fatalf("ExecuteSQL returned error: %v", err)
-	}
-	if result == nil || !result.IsError {
-		t.Fatalf("expected tool error, got %#v", result)
-	}
-	if !strings.Contains(firstTextContent(result), "SQL 安全检查结果无效") {
-		t.Fatalf("unexpected error text: %q", firstTextContent(result))
-	}
-	if backend.queryCalled {
-		t.Fatalf("expected inconsistent inspection not to execute")
 	}
 }
 

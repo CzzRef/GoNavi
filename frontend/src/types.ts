@@ -894,9 +894,7 @@ export interface AIChatMessage {
 
 export interface AISafetyResult {
   allowed: boolean;
-  // "routine" 覆盖例程调用与例程部署，后端在任何安全级别下都不放行，
-  // 因此前端收到 routine 时 allowed 必为 false。
-  operationType: "query" | "dml" | "ddl" | "routine" | "other";
+  operationType: "query" | "dml" | "ddl" | "other";
   requiresConfirm: boolean;
   warningMessage?: string;
 }

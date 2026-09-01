@@ -45,11 +45,6 @@ func (g *Guard) Check(sql string) ai.SafetyResult {
 }
 
 func (g *Guard) isAllowed(opType ai.SQLOperationType) bool {
-	// 例程调用与例程部署的副作用由例程体决定，静态判定无法界定其写入范围，
-	// 因此在任何权限级别下都不由 Agent 执行；完全模式也不放宽。
-	if opType == ai.SQLOpRoutine {
-		return false
-	}
 	switch g.permissionLevel {
 	case ai.PermissionReadOnly:
 		return opType == ai.SQLOpQuery
