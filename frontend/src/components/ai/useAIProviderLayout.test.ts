@@ -12,7 +12,9 @@ const OBSERVED_DESKTOP_WORKSPACE = 633;
 describe('provider workspace geometry', () => {
   it('derives the drawer breakpoint from the two-column budget', () => {
     expect(NARROW_BREAKPOINT).toBe(MIN_CATALOG_WIDTH + RESIZER_WIDTH + MIN_EDITOR_WIDTH);
-    expect(NARROW_BREAKPOINT).toBe(553);
+    expect(MIN_CATALOG_WIDTH).toBe(168);
+    expect(MIN_EDITOR_WIDTH).toBe(200);
+    expect(NARROW_BREAKPOINT).toBe(385);
   });
 
   it('keeps the observed desktop workspace in two-column mode', () => {

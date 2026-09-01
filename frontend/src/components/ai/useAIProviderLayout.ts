@@ -2,12 +2,13 @@ import React from 'react';
 
 const STORAGE_KEY = 'gonavi.ai.providers.layout.v1';
 const DEFAULT_WIDTH = 336;
-// Two-column geometry. The catalog may never squeeze the editor below MIN_EDITOR_WIDTH,
+// Two-column geometry. Compact catalog rows (icon + label + CLI check) no longer
+// need a 216px floor; the catalog may never squeeze the editor below MIN_EDITOR_WIDTH,
 // and the drawer breakpoint is derived from that same budget instead of a standalone
 // guess, so a workspace that can still seat both columns never falls into drawer mode.
-export const MIN_CATALOG_WIDTH = 216;
+export const MIN_CATALOG_WIDTH = 168;
 export const MAX_CATALOG_WIDTH = 520;
-export const MIN_EDITOR_WIDTH = 320;
+export const MIN_EDITOR_WIDTH = 200;
 // Keep in sync with `.gonavi-ai-provider-resizer { flex: 0 0 17px }`.
 export const RESIZER_WIDTH = 17;
 export const NARROW_BREAKPOINT = MIN_CATALOG_WIDTH + RESIZER_WIDTH + MIN_EDITOR_WIDTH;

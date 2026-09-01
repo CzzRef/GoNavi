@@ -381,7 +381,9 @@ const AISettingsProvidersSection: React.FC<AISettingsProvidersSectionProps> = ({
       <button type="button" className={`gonavi-ai-provider-catalog-card${selected ? ' is-editing' : ''}`} aria-pressed={selected}
         aria-label={`${preset.label}${connectedCLI ? ` · ${copy('ai_settings.provider.configured')}` : ''}`}
         disabled={providersLoading || Boolean(loadError) || loading} onClick={() => chooseCatalogPreset(preset.key)}>
-        <span className="gonavi-ai-provider-catalog-top"><span className="gonavi-ai-provider-icon" aria-hidden="true">{preset.icon}</span></span>
+        <span className="gonavi-ai-provider-catalog-top">
+          <span className="gonavi-ai-provider-icon" aria-hidden="true">{preset.icon}</span>
+        </span>
         <span className="gonavi-ai-provider-catalog-label">{preset.label}</span>
       </button>
       </Tooltip>
