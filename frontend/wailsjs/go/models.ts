@@ -1,5 +1,33 @@
 export namespace ai {
 
+	export class CLICapabilityView {
+	    apiFormat: string;
+	    command: string;
+	    supportsEffort: boolean;
+	    effortValues: string[];
+	    effortValuesVerified: boolean;
+	    supportsModelDiscovery: boolean;
+	    hasConfigSource: boolean;
+	    defaultModel: string;
+	    defaultEffort: string;
+
+	    static createFrom(source: any = {}) {
+	        return new CLICapabilityView(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.apiFormat = source["apiFormat"];
+	        this.command = source["command"];
+	        this.supportsEffort = source["supportsEffort"];
+	        this.effortValues = source["effortValues"];
+	        this.effortValuesVerified = source["effortValuesVerified"];
+	        this.supportsModelDiscovery = source["supportsModelDiscovery"];
+	        this.hasConfigSource = source["hasConfigSource"];
+	        this.defaultModel = source["defaultModel"];
+	        this.defaultEffort = source["defaultEffort"];
+	    }
+	}
 	export class ChatSendOptions {
 	    model?: string;
 	    temperature?: number;
@@ -298,11 +326,14 @@ export namespace ai {
 	    model: string;
 	    inlineCompletionModel?: string;
 	    models?: string[];
+	    disabledModels?: string[];
+	    customModels?: string[];
 	    apiFormat?: string;
 	    headers?: Record<string, string>;
 	    maxTokens: number;
 	    temperature: number;
 	    thinkingIntensity?: string;
+	    effort?: string;
 
 	    static createFrom(source: any = {}) {
 	        return new ProviderConfig(source);
@@ -321,11 +352,14 @@ export namespace ai {
 	        this.model = source["model"];
 	        this.inlineCompletionModel = source["inlineCompletionModel"];
 	        this.models = source["models"];
+	        this.disabledModels = source["disabledModels"];
+	        this.customModels = source["customModels"];
 	        this.apiFormat = source["apiFormat"];
 	        this.headers = source["headers"];
 	        this.maxTokens = source["maxTokens"];
 	        this.temperature = source["temperature"];
 	        this.thinkingIntensity = source["thinkingIntensity"];
+	        this.effort = source["effort"];
 	    }
 	}
 	export class SafetyResult {
