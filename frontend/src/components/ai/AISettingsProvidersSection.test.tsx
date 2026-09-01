@@ -1,4 +1,5 @@
 import React from 'react';
+import { readFileSync } from 'node:fs';
 import { Form } from 'antd';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
@@ -83,6 +84,15 @@ const provider: AIProviderConfig = {
 const overlayTheme = buildOverlayWorkbenchTheme(false);
 
 describe('AISettingsProvidersSection', () => {
+
+  it('places the catalog hide control beside the icon instead of over the name', () => {
+    const css = readFileSync(new URL('./AISettingsProvidersSection.css', import.meta.url), 'utf8');
+    const rule = css.match(/\.gonavi-ai-provider-visibility \{[^}]+\}/)?.[0] || '';
+    expect(rule).toContain('left: 31px');
+    expect(rule).toContain('width: 16px');
+    expect(rule).not.toContain('bottom:');
+    expect(css).not.toMatch(/\.gonavi-ai-provider-catalog-label \{[^}]*padding-right: 20px/);
+  });
 
   it('renders providers as flat rows with a separate native selection button', () => {
     const Wrap = () => {

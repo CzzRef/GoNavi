@@ -46,22 +46,25 @@
 [data-density='normal'] .gonavi-ai-provider-select { min-height: 54px; }
 .gonavi-ai-provider-chip-model { font-family: ui-monospace, monospace; font-size: 11px; color: var(--provider-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gonavi-ai-provider-empty { color: var(--provider-muted); font-size: 12px; padding: 6px 0; }
-.gonavi-ai-provider-workspace-toolbar { display: flex; align-items: center; gap: 10px; flex-shrink: 0; padding: 10px 0; }
+.gonavi-ai-provider-workspace-toolbar { display: flex; align-items: center; gap: 10px; flex-shrink: 0; padding: 6px 0; }
 .gonavi-ai-provider-workspace-toolbar > span { margin-left: auto; font-size: 11px; color: var(--provider-muted); }
 .gonavi-ai-provider-catalog-search { flex: 0 0 auto; width: 12.5em; max-width: 42%; font-size: 12px; }
 .gonavi-ai-provider-workspace { display: flex; flex: 1; min-width: 0; min-height: 0; position: relative; isolation: isolate; gap: 0; }
 .gonavi-ai-provider-catalog { flex: 0 0 var(--provider-catalog-width, 336px); width: var(--provider-catalog-width, 336px); align-self: stretch; height: 100%; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
 .gonavi-ai-provider-catalog-scroll { overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; flex: 1 1 0; min-height: 0; padding: 1px 5px 1px 1px; scrollbar-width: thin; }
-.gonavi-ai-provider-catalog-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 98px), 1fr)); gap: 5px; align-content: start; }
+.gonavi-ai-provider-catalog-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 112px), 1fr)); gap: 4px; align-content: start; }
 .gonavi-ai-provider-catalog-entry { position: relative; display: flex; min-width: 0; }
 .gonavi-ai-provider-catalog-entry > .gonavi-ai-provider-catalog-card { width: 100%; }
-.gonavi-ai-provider-catalog-card { display: flex; flex-direction: column; gap: 7px; padding: 10px 8px; min-width: 0; min-height: 88px; border: 1px solid transparent; border-radius: 7px; background: transparent; color: var(--provider-text); text-align: left; cursor: pointer; }
+.gonavi-ai-provider-catalog-card { display: flex; flex-direction: column; gap: 4px; padding: 7px 6px 6px; min-width: 0; min-height: 0; border: 1px solid transparent; border-radius: 7px; background: transparent; color: var(--provider-text); text-align: left; cursor: pointer; }
 .gonavi-ai-provider-catalog-card:hover { background: var(--provider-active-bg); }
 .gonavi-ai-provider-catalog-card.is-editing { border-color: var(--provider-line); box-shadow: inset 2px 0 var(--provider-active); background: var(--provider-active-bg); }
 .gonavi-ai-provider-catalog-card:disabled { cursor: wait; opacity: .65; }
-.gonavi-ai-provider-catalog-card > span:last-child { font-weight: 550; font-size: 12px; line-height: 1.45; overflow-wrap: anywhere; }
-.gonavi-ai-provider-catalog-label { padding-right: 20px; }
-.gonavi-ai-provider-visibility { position: absolute; right: 5px; bottom: 7px; display: grid; place-items: center; width: 23px; height: 23px; padding: 0; border: 0; border-radius: 5px; color: var(--provider-muted); background: transparent; cursor: pointer; }
+.gonavi-ai-provider-catalog-card .gonavi-ai-provider-icon { width: 24px; height: 24px; font-size: 14px; border-radius: 6px; }
+.gonavi-ai-provider-catalog-label { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 550; font-size: 12px; line-height: 1.3; }
+.gonavi-ai-provider-catalog-check { position: absolute; top: 6px; right: 5px; display: grid; place-items: center; width: 18px; height: 18px; color: var(--provider-active); font-size: 12px; pointer-events: auto; }
+/* Hide stays a sibling of the card button (no nested buttons) and sits in the
+   1px gap to the right of the 24px icon: card padding 7/6, icon 24, control 16. */
+.gonavi-ai-provider-visibility { position: absolute; z-index: 1; left: 31px; top: 11px; display: grid; place-items: center; width: 16px; height: 16px; padding: 0; border: 0; border-radius: 4px; color: var(--provider-muted); background: transparent; cursor: pointer; font-size: 10px; line-height: 1; }
 .gonavi-ai-provider-visibility:hover, .gonavi-ai-provider-visibility:focus-visible { color: var(--provider-active); background: var(--provider-active-bg); }
 .gonavi-ai-provider-catalog-footer { display: flex; flex-direction: column; flex: 0 0 auto; margin-top: auto; min-height: 0; max-height: min(38%, 220px); }
 .gonavi-ai-provider-hidden { display: flex; flex-direction: column; flex: 0 1 auto; min-height: 0; border-top: 1px solid var(--provider-line); }
