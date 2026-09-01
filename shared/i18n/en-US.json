@@ -1733,6 +1733,7 @@
   "ai_settings.form.display_name": "Display name (optional)",
   "ai_settings.form.default_model": "Default model",
   "ai_settings.form.more_settings": "More settings",
+  "ai_settings.form.hint_label": "Details",
   "ai_settings.form.favorite_models": "Favorite chat models",
   "ai_settings.form.model_use_custom": "Use custom model:",
   "ai_settings.form.model_catalog.cache": "Suggestions come from the local Codex cache; account access and model responses are not verified.",

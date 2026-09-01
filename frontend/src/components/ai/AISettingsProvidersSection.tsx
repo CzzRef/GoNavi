@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button, Dropdown, Form, Input, Popconfirm, Select, Tooltip } from 'antd';
-import { CheckOutlined, DeleteOutlined, EditOutlined, EyeInvisibleOutlined, EyeOutlined, LinkOutlined, LoadingOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons';
+import { CheckOutlined, CloseOutlined, DeleteOutlined, DownOutlined, EditOutlined, EyeInvisibleOutlined, EyeOutlined, InfoCircleOutlined, LeftOutlined, LinkOutlined, LoadingOutlined, PlusOutlined, RightOutlined, SearchOutlined } from '@ant-design/icons';
 import type { FormInstance } from 'antd/es/form';
 
 import type { AIProviderConfig } from '../../types';
@@ -22,6 +22,35 @@ import { isProviderSecretRequirementSatisfied } from '../../utils/providerSecret
 import { AIGetCLICapabilities, AIGetCLIModelCatalog } from '../../../wailsjs/go/aiservice/Service';
 import type { ai } from '../../../wailsjs/go/models';
 import type { OverlayWorkbenchTheme } from '../../utils/overlayWorkbenchTheme';
+
+// A rejected add or save often marks a field below the fold, which reads as
+// "nothing happened". Both antd field errors and the standalone alerts are matched,
+// so whichever appears first in the form is the one brought into view.
+export const REVEAL_ERROR_SELECTOR = '.ant-form-item-has-error, [role="alert"]';
+
+interface RevealTarget { getBoundingClientRect(): { top: number; height: number } }
+interface RevealContainer {
+  scrollTop: number;
+  clientHeight: number;
+  querySelector(selector: string): RevealTarget | null;
+  getBoundingClientRect(): { top: number };
+  scrollTo?: (options: ScrollToOptions) => void;
+}
+
+// scrollIntoView also scrolls every scrollable ancestor — including panes whose
+// overflow is hidden, which then have no scrollbar to put them back and leave the
+// settings header clipped. Only this container's own scrollTop is moved instead, so
+// the field list travels and nothing around it does.
+export const revealFirstErrorIn = (container?: RevealContainer | null): boolean => {
+  const target = container?.querySelector(REVEAL_ERROR_SELECTOR);
+  if (!container || !target) return false;
+  const { top: targetTop, height: targetHeight } = target.getBoundingClientRect();
+  const centred = (container.clientHeight - targetHeight) / 2;
+  const next = Math.max(0, container.scrollTop + targetTop - container.getBoundingClientRect().top - Math.max(0, centred));
+  if (container.scrollTo) container.scrollTo({ top: next, behavior: 'smooth' });
+  else container.scrollTop = next;
+  return true;
+};
 
 export interface AISettingsProviderPresetOption {
   key: string;
@@ -191,6 +220,20 @@ const AISettingsProvidersSection: React.FC<AISettingsProvidersSectionProps> = ({
   React.useEffect(() => {
     if (editorScrollRef.current) editorScrollRef.current.scrollTop = 0;
   }, [editorScope]);
+  // A rejected add or save often lands on a field below the fold, which reads as
+  // "nothing happened". Bring the first error into view instead.
+  const revealFirstError = React.useCallback(() => revealFirstErrorIn(editorScrollRef.current), []);
+  // Validation messages mount after the attempt resolves, so check once on the next
+  // frame and once more shortly after for validators that resolve asynchronously.
+  const revealFirstErrorSoon = React.useCallback(() => {
+    // Guarded: non-DOM render hosts supply only a partial window.
+    if (typeof window === 'undefined') return;
+    window.requestAnimationFrame?.(revealFirstError);
+    window.setTimeout?.(revealFirstError, 200);
+  }, [revealFirstError]);
+  React.useEffect(() => {
+    if (duplicateCLI || testStatus === 'error') revealFirstError();
+  }, [duplicateCLI, testStatus, revealFirstError]);
   const rowButtons = React.useRef(new Map<string, HTMLButtonElement>());
   const visibleProviders = filterProviders(providers, search, (provider) => resolveProviderPreset(provider).label);
   const [detailsOpen, setDetailsOpen] = React.useState(!editingProvider?.id);
@@ -298,6 +341,8 @@ const AISettingsProvidersSection: React.FC<AISettingsProvidersSectionProps> = ({
     layout.setPresetHidden(key, false);
   };
   const saveActionLabel = copy(editingProvider?.id ? 'ai_settings.provider.save_changes' : 'ai_settings.provider.action.add');
+  const handleSaveProvider = () => { onSaveProvider(); revealFirstErrorSoon(); };
+  const handleTestProvider = () => { onTestProvider(); revealFirstErrorSoon(); };
   const currentName = providers.find((provider) => provider.id === activeProviderId)?.name;
   const rootStyle = {
     '--provider-muted': overlayTheme.mutedText, '--provider-text': overlayTheme.titleText,
@@ -307,21 +352,42 @@ const AISettingsProvidersSection: React.FC<AISettingsProvidersSectionProps> = ({
   } as React.CSSProperties;
   const requiredModelRule = { validator: (_: unknown, value: string) => disabledModels.has(value)
     ? Promise.reject(new Error(copy('ai_settings.models.default_required'))) : Promise.resolve() };
+  // Hints used to be full-width note blocks stacked between the fields. On a short
+  // settings pane they pushed the form itself out of view, so they now collapse into
+  // one icon beside the heading they belong to and open on hover.
+  const hintIcon = (lines: React.ReactNode[]) => {
+    const shown = lines.filter(Boolean);
+    if (!shown.length) return null;
+    return <Tooltip {...hintTooltipTiming} title={<div className="gonavi-ai-provider-hint-body">
+      {shown.map((line, index) => <div key={index}>{line}</div>)}
+    </div>}>
+      <button type="button" className="gonavi-ai-provider-hint"
+        onClick={(event) => { event.preventDefault(); event.stopPropagation(); }}>
+        <InfoCircleOutlined aria-hidden="true" />
+        {/* The hint is hover-only visually, so the same copy stays in the accessible
+            name for screen readers instead of living only in the tooltip. */}
+        <span className="gonavi-ai-provider-hint-text">{copy('ai_settings.form.hint_label')}: {shown.map((line, index) => <span key={index}>{line} </span>)}</span>
+      </button>
+    </Tooltip>;
+  };
   const catalogEntry = (preset: AISettingsProviderPresetOption) => {
     const configured = providersByPreset.get(preset.key) || [];
     const connectedCLI = Boolean(presetCLIIdentity(preset) && configured.length);
     const selected = isEditing && preset.key === presetKeyFromForm;
     return <div className="gonavi-ai-provider-catalog-entry" key={preset.key}>
-      <Tooltip {...hintTooltipTiming} title={<div>{preset.desc}<div>{getProviderEndpointTypes(preset).map(endpointLabel).join(' · ')}</div>
-      {connectedCLI && <div>{copy('ai_settings.provider.local_cli_reuse')}</div>}</div>} trigger={['hover', 'focus']}>
+      <Tooltip {...hintTooltipTiming} title={<div><strong>{preset.label}</strong><div>{preset.desc}</div>
+        <div>{getProviderEndpointTypes(preset).map(endpointLabel).join(' · ')}</div>
+        {connectedCLI && <div>{copy('ai_settings.provider.local_cli_reuse')}</div>}</div>} trigger={['hover', 'focus']}>
       <button type="button" className={`gonavi-ai-provider-catalog-card${selected ? ' is-editing' : ''}`} aria-pressed={selected}
         aria-label={`${preset.label}${connectedCLI ? ` · ${copy('ai_settings.provider.configured')}` : ''}`}
         disabled={providersLoading || Boolean(loadError) || loading} onClick={() => chooseCatalogPreset(preset.key)}>
-        <span className="gonavi-ai-provider-catalog-top"><span className="gonavi-ai-provider-icon" aria-hidden="true">{preset.icon}</span>
-          {configured.length > 0 && <small>{connectedCLI ? copy('ai_settings.provider.configured') : copy('ai_settings.provider.config_count', { count: configured.length })}</small>}
-        </span><span className="gonavi-ai-provider-catalog-label">{preset.label}</span>
+        <span className="gonavi-ai-provider-catalog-top"><span className="gonavi-ai-provider-icon" aria-hidden="true">{preset.icon}</span></span>
+        <span className="gonavi-ai-provider-catalog-label">{preset.label}</span>
       </button>
       </Tooltip>
+      {connectedCLI && <Tooltip {...hintTooltipTiming} title={copy('ai_settings.models.enabled')}>
+        <span className="gonavi-ai-provider-catalog-check" aria-hidden="true"><CheckOutlined /></span>
+      </Tooltip>}
       <Tooltip {...hintTooltipTiming} title={copy('ai_settings.provider.hide')}>
         <button type="button" className="gonavi-ai-provider-visibility" aria-label={`${copy('ai_settings.provider.hide')}: ${preset.label}`}
           ref={(node) => { if (node) visibilityButtons.current.set(`visible:${preset.key}`, node); else visibilityButtons.current.delete(`visible:${preset.key}`); }}
@@ -346,7 +412,7 @@ const AISettingsProvidersSection: React.FC<AISettingsProvidersSectionProps> = ({
       <div className="gonavi-ai-provider-toolbar">
         <button type="button" className="gonavi-ai-provider-collapse" aria-expanded={!layout.preferences.savedCollapsed}
           aria-controls="gonavi-ai-provider-chips" onClick={() => layout.setPreference('savedCollapsed', !layout.preferences.savedCollapsed)}>
-          <span aria-hidden="true">{layout.preferences.savedCollapsed ? '›' : '⌄'}</span>
+          <span className="gonavi-ai-provider-caret" aria-hidden="true">{layout.preferences.savedCollapsed ? <RightOutlined /> : <DownOutlined />}</span>
           {copy('ai_settings.provider.configured')} <small>{providers.length}</small>
         </button>
         {layout.preferences.savedCollapsed ? <span className="gonavi-ai-provider-collapsed-default">{currentName && `${copy('ai_settings.provider.default')}: ${currentName}`}</span> : <>
@@ -399,6 +465,14 @@ const AISettingsProvidersSection: React.FC<AISettingsProvidersSectionProps> = ({
             </Tooltip>
             <Tooltip {...hintTooltipTiming} title={copy('ai_settings.provider.action.edit')}><Button type="text" size="small" icon={<EditOutlined />}
               aria-label={`${copy('ai_settings.provider.action.edit')}: ${name}`} onClick={() => onEditProvider(provider)} /></Tooltip>
+            {/* Removing a configuration is destructive, so the corner control still
+                confirms before it deletes; it only appears on hover or focus. */}
+            <Popconfirm title={copy('ai_settings.provider.confirm_delete')} onConfirm={() => onDeleteProvider(provider.id)}
+              disabled={Boolean(pendingProviderId) || loading} okButtonProps={{ danger: true }}
+              okText={copy('ai_settings.provider.action.delete')} cancelText={copy('common.cancel')}>
+              <button type="button" className="gonavi-ai-provider-chip-remove" disabled={Boolean(pendingProviderId) || loading}
+                aria-label={`${copy('ai_settings.provider.action.delete')}: ${name}`}><CloseOutlined aria-hidden="true" /></button>
+            </Popconfirm>
           </div>;
         })}
       </div>
@@ -406,7 +480,7 @@ const AISettingsProvidersSection: React.FC<AISettingsProvidersSectionProps> = ({
     <div className="gonavi-ai-provider-workspace-toolbar">
       <button type="button" ref={catalogToggleRef} className="gonavi-ai-provider-catalog-toggle" aria-expanded={layout.catalogVisible}
         aria-controls="gonavi-ai-provider-catalog" onClick={layout.toggleCatalog}>
-        <span aria-hidden="true">{layout.catalogVisible ? '‹' : '›'}</span> {copy('ai_settings.provider.catalog')} <small>{displayedPresets.length}</small>
+        <span className="gonavi-ai-provider-caret" aria-hidden="true">{layout.catalogVisible ? <LeftOutlined /> : <RightOutlined />}</span>{copy('ai_settings.provider.catalog')} <small>{displayedPresets.length}</small>
       </button>
       {layout.catalogVisible && <Input className="gonavi-ai-provider-catalog-search" prefix={<SearchOutlined />} allowClear value={catalogSearch}
         onChange={(event) => setCatalogSearch(event.target.value)}
@@ -429,7 +503,7 @@ const AISettingsProvidersSection: React.FC<AISettingsProvidersSectionProps> = ({
             <button type="button" ref={hiddenToggleRef} className="gonavi-ai-provider-hidden-toggle" aria-expanded={hiddenExpanded}
               aria-controls="gonavi-ai-provider-hidden-list" title={copy('ai_settings.provider.hidden_hint')}
               onClick={() => setHiddenExpanded((expanded) => !expanded)}>
-              <span aria-hidden="true">{hiddenExpanded ? '⌄' : '›'}</span><EyeInvisibleOutlined aria-hidden="true" />
+              <span className="gonavi-ai-provider-caret" aria-hidden="true">{hiddenExpanded ? <DownOutlined /> : <RightOutlined />}</span><EyeInvisibleOutlined aria-hidden="true" />
               {copy('ai_settings.provider.hidden_catalog')} <small>{catalogSearch.trim() ? `${matchingHiddenPresets.length} / ` : ''}{hiddenPresets.length}</small>
             </button>
             {hiddenExpanded && <div id="gonavi-ai-provider-hidden-list" className="gonavi-ai-provider-hidden-list">
@@ -447,17 +521,21 @@ const AISettingsProvidersSection: React.FC<AISettingsProvidersSectionProps> = ({
               {!matchingHiddenPresets.length && <div className="gonavi-ai-provider-catalog-empty" role="status">{copy('ai_settings.provider.no_matches')}</div>}
             </div>}
           </section>}
-          <span className="gonavi-ai-provider-catalog-help">{copy('ai_settings.provider.resize_hint')}</span>
         </div>
       </aside>
       {layout.catalogVisible && !layout.narrow && <div {...layout.resizerProps} className="gonavi-ai-provider-resizer"
-        aria-label={copy('ai_settings.provider.resize')} aria-controls="gonavi-ai-provider-catalog" title={copy('ai_settings.provider.resize_hint')}><span aria-hidden="true">⋮</span></div>}
+        aria-label={copy('ai_settings.provider.resize')} aria-controls="gonavi-ai-provider-catalog"><span aria-hidden="true">⋮</span></div>}
       <div className="gonavi-ai-provider-editor">
         {!editorReady ? <div className="gonavi-ai-provider-editor-empty">{copy('ai_settings.provider.choose_configuration')}</div> : <Form form={form}
           layout="vertical" size="small" onValuesChange={onValuesChange} className="gonavi-ai-provider-form">
           <div ref={editorScrollRef} className="gonavi-ai-provider-editor-scroll">
             <div className="gonavi-ai-provider-editor-heading"><span className="gonavi-ai-provider-icon" aria-hidden="true">{presetFromForm?.icon}</span>
               <div><strong>{presetFromForm?.label}</strong><span>{copy(editingProvider?.id ? 'ai_settings.provider.editor.edit_title' : 'ai_settings.provider.editor.add_title')}</span></div>
+              {hintIcon([
+                usesLocalCLI && <>{currentConfigSaved && <CheckOutlined />} {copy('ai_settings.provider.local_cli_reuse')}</>,
+                usesLocalCLI && watchedApiFormat === 'cursor-cli' && copy('ai_settings.form.local_cli.cursor_boundary'),
+                copy(modelDiscoveryError ? 'ai_settings.form.models_manual_fallback' : 'ai_settings.models.picker_hint'),
+              ])}
               <Button type="text" size="small" onClick={onCancelEdit}>{copy('ai_settings.provider.close_editor')}</Button>
               {editingProvider?.id && <Popconfirm title={copy('ai_settings.provider.confirm_delete')} onConfirm={() => onDeleteProvider(editingProvider.id)}
                 disabled={Boolean(pendingProviderId) || loading} okButtonProps={{ danger: true }} okText={copy('ai_settings.provider.action.delete')} cancelText={copy('common.cancel')}>
@@ -468,10 +546,6 @@ const AISettingsProvidersSection: React.FC<AISettingsProvidersSectionProps> = ({
             <Form.Item name="authMode" hidden><Input /></Form.Item><Form.Item name="apiFormat" hidden><Input /></Form.Item>
             {!usesLocalCLI && <Form.Item name="effort" hidden><Input /></Form.Item>}
             {duplicateCLI && <div role="alert">{copy('ai_settings.provider.duplicate_cli')}</div>}
-            {usesLocalCLI && <div className="gonavi-ai-provider-configured-note" role="note">
-              {currentConfigSaved && <CheckOutlined />} {copy('ai_settings.provider.local_cli_reuse')}
-              {watchedApiFormat === 'cursor-cli' && <div>{copy('ai_settings.form.local_cli.cursor_boundary')}</div>}
-            </div>}
             <div className={`gonavi-ai-provider-field-grid gonavi-ai-provider-basic-fields${usesLocalCLI ? ' has-effort' : ''}`}>
               <Form.Item label={fieldLabel('ai_settings.form.display_name')} name="name"><Input placeholder={presetFromForm?.label} size="middle" /></Form.Item>
               <Form.Item name="model" rules={[requiredModelRule]} label={<span className="gonavi-ai-provider-model-label">{fieldLabel('ai_settings.form.default_model')}
@@ -496,10 +570,17 @@ const AISettingsProvidersSection: React.FC<AISettingsProvidersSectionProps> = ({
                   : <Input size="middle" disabled placeholder={copy(activeCLICapability?.supportsEffort === false ? 'ai_settings.form.effort_unsupported' : 'ai_settings.form.effort_placeholder_empty')} />}
               </Form.Item>}
             </div>
-            <p className="gonavi-ai-provider-model-hint">{copy(modelDiscoveryError ? 'ai_settings.form.models_manual_fallback' : 'ai_settings.models.picker_hint')}</p>
             <details className="gonavi-ai-cli-details" open={detailsOpen}>
               <summary aria-expanded={detailsOpen} onClick={(event) => { event.preventDefault(); setDetailsOpen((open) => !open); }}>
                 {copy(usesLocalCLI ? 'ai_settings.form.local_cli.title' : 'ai_settings.form.section.auth_connection')}
+                {hintIcon([
+                  codeBuddyUsesOptionalSecret && copy('ai_settings.form.api_key.codebuddy_hint'),
+                  usesLocalCLI && copy(presetKeyFromForm === 'codex' ? 'ai_settings.form.local_cli.codex_hint' : presetKeyFromForm === 'grok' ? 'ai_settings.form.local_cli.grok_hint' : presetKeyFromForm === 'cursor-cli' ? 'ai_settings.form.local_cli.cursor_hint' : 'ai_settings.form.local_cli.claude_hint'),
+                  usesLocalCLI && activeCLICapability?.command && <>{copy('ai_settings.form.local_cli.command')}: <code>{activeCLICapability.command}</code></>,
+                  usesLocalCLI && activeCLICapability?.supportsEffort && !activeCLICapability.effortValuesVerified && copy('ai_settings.form.effort_hint_unverified'),
+                  usesLocalCLI && capabilityError && copy('ai_settings.form.cli_capability_unavailable'),
+                  copy(modelSourceKey),
+                ])}
               </summary>
               {!usesLocalCLI && <div className="gonavi-ai-provider-field-grid gonavi-ai-provider-connection-fields">
                 <Form.Item label={fieldLabel('ai_settings.form.api_format')}><Select className="gonavi-ai-provider-endpoint-select" aria-label={copy('ai_settings.form.api_format')} size="middle"
@@ -519,17 +600,9 @@ const AISettingsProvidersSection: React.FC<AISettingsProvidersSectionProps> = ({
                     visibilityToggle={{ visible: primaryPasswordVisible, onVisibleChange: onPrimaryPasswordVisibleChange }} style={{ background: inputBg }} />
                 </Form.Item>
               </div>}
-              <div className="gonavi-ai-provider-detail-note" role="note">
-                {codeBuddyUsesOptionalSecret && <div>{copy('ai_settings.form.api_key.codebuddy_hint')}</div>}
-                {usesLocalCLI && <><div>{copy(presetKeyFromForm === 'codex' ? 'ai_settings.form.local_cli.codex_hint' : presetKeyFromForm === 'grok' ? 'ai_settings.form.local_cli.grok_hint' : presetKeyFromForm === 'cursor-cli' ? 'ai_settings.form.local_cli.cursor_hint' : 'ai_settings.form.local_cli.claude_hint')}</div>
-                  {activeCLICapability?.command && <div>{copy('ai_settings.form.local_cli.command')}: <code>{activeCLICapability.command}</code></div>}
-                  {activeCLICapability?.supportsEffort && !activeCLICapability.effortValuesVerified && <div>{copy('ai_settings.form.effort_hint_unverified')}</div>}
-                  {capabilityError && <div>{copy('ai_settings.form.cli_capability_unavailable')}</div>}
-                </>}
-                <div>{copy(modelSourceKey)}</div>
-              </div>
             </details>
-            <details className="gonavi-ai-provider-more"><summary>{copy('ai_settings.form.more_settings')}</summary>
+            <details className="gonavi-ai-provider-more"><summary>{copy('ai_settings.form.more_settings')}
+              {hintIcon([copy('ai_settings.form.inline_completion_model_hint')])}</summary>
               <div className="gonavi-ai-provider-field-grid">
                 {supportsModelList && <Form.Item label={fieldLabel('ai_settings.form.favorite_models')} name="models"><Select mode="tags" size="middle"
                   maxTagCount="responsive" tokenSeparators={[',']} placeholder={copy('ai_settings.form.model_list_placeholder.local_cli')}
@@ -538,23 +611,23 @@ const AISettingsProvidersSection: React.FC<AISettingsProvidersSectionProps> = ({
                   <AIProviderModelSelect label={copy('ai_settings.form.inline_completion_model')} placeholder={copy('ai_settings.form.inline_completion_model_placeholder')}
                     customLabel={copy('ai_settings.form.model_use_custom')} options={modelOptions} disabledModels={watchedDisabledModels} />
                 </Form.Item>
-              </div><p className="gonavi-ai-provider-detail-note">{copy('ai_settings.form.inline_completion_model_hint')}</p>
+              </div>
             </details>
           </div>
           <div className="gonavi-ai-provider-actions">
-            <div className="gonavi-ai-provider-check-action"><Button size="middle" onClick={onTestProvider} loading={testing} disabled={duplicateCLI}>{copy('ai_settings.action.test')}</Button>
+            <div className="gonavi-ai-provider-check-action"><Button size="middle" onClick={handleTestProvider} loading={testing} disabled={duplicateCLI}>{copy('ai_settings.action.test')}</Button>
               <small>{copy(dirty ? 'ai_settings.provider.unsaved' : 'ai_settings.provider.saved')}</small></div>
             <div className="gonavi-ai-provider-test-result" role={testStatus === 'error' ? 'alert' : 'status'} data-error={testStatus === 'error'}>
               {testResult && (testResult.success ? <><CheckOutlined /> {copy(`ai_settings.test.${testResult.checkKind}`)}</> : testResult.message)}
             </div>
             <div className="gonavi-ai-provider-save-actions">{canSaveAsCopy
-              ? <Dropdown.Button size="middle" type="primary" onClick={onSaveProvider}
+              ? <Dropdown.Button size="middle" type="primary" onClick={handleSaveProvider} icon={<DownOutlined />}
                 loading={loading && saveMode === 'save'} disabled={duplicateCLI || loading && saveMode === 'copy'}
                 menu={{ items: [{ key: 'save-as', label: <span className="gonavi-ai-provider-save-as-item">
                   <span>{copy('ai_settings.provider.save_as')}</span><small>{copy('ai_settings.provider.copy_hint')}</small>
                 </span> }], onClick: () => onSaveProviderAsCopy?.() }}>
                 {saveActionLabel}</Dropdown.Button>
-              : <Button size="middle" type="primary" onClick={onSaveProvider}
+              : <Button size="middle" type="primary" onClick={handleSaveProvider}
                 loading={loading && saveMode === 'save'} disabled={duplicateCLI || loading && saveMode === 'copy'}>{saveActionLabel}</Button>}
             </div>
           </div>

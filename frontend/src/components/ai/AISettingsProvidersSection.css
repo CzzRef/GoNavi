@@ -1,20 +1,38 @@
 .gonavi-ai-provider-management { display: flex; flex-direction: column; flex: 1; height: 100%; min-height: 0; min-width: 0; color: var(--provider-text); }
 .gonavi-ai-provider-management button { font: inherit; }
-.gonavi-ai-provider-heading { display: flex; align-items: center; justify-content: flex-start; gap: 10px; flex-shrink: 0; margin-bottom: 10px; }
+.gonavi-ai-provider-heading { display: flex; align-items: center; justify-content: flex-start; gap: 10px; flex-shrink: 0; margin-bottom: 6px; }
 .gonavi-ai-provider-heading-copy { color: var(--provider-muted); font-size: 12px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 0 0 auto; max-width: 42%; }
 .gonavi-ai-provider-heading .gonavi-ai-provider-add { flex: 0 0 auto; width: 12.75em; }
-.gonavi-ai-provider-list { min-height: 0; max-height: 210px; flex-shrink: 0; display: flex; flex-direction: column; padding-bottom: 12px; border-bottom: 1px solid var(--provider-line); }
-.gonavi-ai-provider-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.gonavi-ai-provider-list { min-height: 0; max-height: min(168px, 26vh); flex-shrink: 0; display: flex; flex-direction: column; padding-bottom: 8px; border-bottom: 1px solid var(--provider-line); }
+.gonavi-ai-provider-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 6px; }
 .gonavi-ai-provider-toolbar > .ant-input-affix-wrapper { flex: 1 1 150px; max-width: 230px; font-size: 12px; }
-.gonavi-ai-provider-collapse, .gonavi-ai-provider-catalog-toggle { padding: 4px 0; background: transparent; border: 0; color: var(--provider-muted); cursor: pointer; display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+.gonavi-ai-provider-collapse, .gonavi-ai-provider-catalog-toggle { padding: 4px 0; background: transparent; border: 0; color: var(--provider-muted); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+/* Real icons instead of the bare '>' / 'v' glyphs, in a fixed box so every caret
+   lands on the same optical centre as the label beside it. */
+.gonavi-ai-provider-caret { flex-shrink: 0; display: inline-grid; place-items: center; width: 14px; height: 14px; font-size: 10px; line-height: 1; opacity: .75; transition: opacity .12s ease; }
+.gonavi-ai-provider-collapse:hover .gonavi-ai-provider-caret, .gonavi-ai-provider-catalog-toggle:hover .gonavi-ai-provider-caret, .gonavi-ai-provider-hidden-toggle:hover .gonavi-ai-provider-caret { opacity: 1; }
 .gonavi-ai-provider-collapse small, .gonavi-ai-provider-catalog-toggle small { font-variant-numeric: tabular-nums; }
 .gonavi-ai-provider-collapsed-default { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--provider-muted); }
 .gonavi-ai-provider-density { display: flex; border: 1px solid var(--provider-line); padding: 2px; border-radius: 6px; margin-left: auto; }
 .gonavi-ai-provider-density button { border: 0; border-radius: 4px; padding: 3px 9px; color: var(--provider-muted); background: transparent; cursor: pointer; font-size: 12px; white-space: nowrap; }
 .gonavi-ai-provider-density button[aria-pressed='true'] { color: var(--provider-active); background: var(--provider-active-bg); }
-.gonavi-ai-provider-chips { display: flex; flex-wrap: wrap; gap: 6px; overflow-y: auto; min-height: 0; padding: 2px; scrollbar-width: thin; }
+.gonavi-ai-provider-chips { display: flex; flex-wrap: wrap; gap: 6px; overflow-y: auto; min-height: 0; padding: 9px 9px 2px 2px; scrollbar-width: thin; }
 .gonavi-ai-provider-chips[hidden], .gonavi-ai-provider-catalog[hidden] { display: none !important; }
-.gonavi-ai-provider-chip { display: inline-flex; align-items: center; gap: 2px; border: 1px solid var(--provider-line); border-radius: 7px; min-width: 0; max-width: 100%; }
+.gonavi-ai-provider-chip { position: relative; display: inline-flex; align-items: center; gap: 2px; border: 1px solid var(--provider-line); border-radius: 7px; min-width: 0; max-width: 100%; }
+/* A saved configuration can be dropped straight from its chip. The control stays
+   out of sight until the chip is hovered or holds focus, so the row reads quietly
+   at rest, and it still confirms before deleting. */
+.gonavi-ai-provider-chip-remove { position: absolute; top: -7px; right: -7px; z-index: 1; display: grid; place-items: center; width: 14px; height: 14px; padding: 0; border: 0; background: transparent; color: var(--provider-muted); font-size: 9px; line-height: 1; cursor: pointer; opacity: 0; pointer-events: none; transition: opacity .12s ease, color .12s ease; }
+.gonavi-ai-provider-chip:hover .gonavi-ai-provider-chip-remove, .gonavi-ai-provider-chip:focus-within .gonavi-ai-provider-chip-remove { opacity: 1; pointer-events: auto; }
+/* A short wobble on hover: delete sits next to edit, so the pointer should feel it
+   has landed on a different control before it clicks. */
+@keyframes gonavi-ai-provider-remove-shake {
+  0%, 100% { transform: scale(1.2) rotate(0deg); }
+  25% { transform: scale(1.2) rotate(-15deg); }
+  75% { transform: scale(1.2) rotate(15deg); }
+}
+.gonavi-ai-provider-chip-remove:hover, .gonavi-ai-provider-chip-remove:focus-visible { color: var(--gn-danger, #cf4343); animation: gonavi-ai-provider-remove-shake .26s ease-in-out 2; }
+.gonavi-ai-provider-chip-remove:disabled { cursor: not-allowed; opacity: .4; animation: none; }
 .gonavi-ai-provider-chip.is-active { border-color: var(--provider-active); background: var(--provider-active-bg); }
 .gonavi-ai-provider-select { align-self: stretch; min-width: 0; flex: 1; display: flex; align-items: center; gap: 7px; padding: 7px 3px 7px 9px; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
 .gonavi-ai-provider-chip .ant-btn { flex-shrink: 0; color: var(--provider-muted); margin-right: 3px; }
@@ -58,10 +76,8 @@
 .gonavi-ai-provider-catalog-empty { margin: 0 4px 8px; font-size: 11px; color: var(--provider-muted); }
 .gonavi-ai-settings-panel-providers { height: 100%; min-height: 0; display: flex; flex-direction: column; }
 .gonavi-ai-settings-panel-providers[hidden] { display: none !important; }
-.gonavi-ai-provider-catalog-top { display: flex; align-items: center; justify-content: space-between; gap: 3px; width: 100%; }
-.gonavi-ai-provider-catalog-top small { font-size: 10px; color: var(--provider-muted); white-space: nowrap; }
+.gonavi-ai-provider-catalog-top { display: flex; align-items: center; gap: 1px; width: 100%; padding-right: 18px; }
 .gonavi-ai-provider-icon { flex-shrink: 0; display: inline-grid; place-items: center; width: 29px; height: 29px; border-radius: 7px; background: var(--provider-active-bg); color: var(--provider-active); font-size: 17px; }
-.gonavi-ai-provider-catalog-help { font-size: 10px; color: var(--provider-muted); flex-shrink: 0; padding: 4px 4px 2px; }
 .gonavi-ai-provider-resizer { width: 17px; flex: 0 0 17px; cursor: col-resize; touch-action: none; position: relative; display: flex; align-items: center; justify-content: center; outline-offset: -3px; }
 .gonavi-ai-provider-resizer::before { content: ''; position: absolute; top: 0; bottom: 0; left: 8px; width: 1px; background: var(--provider-line); }
 .gonavi-ai-provider-resizer > span { z-index: 1; width: 9px; padding: 4px 0; border: 1px solid var(--provider-line); border-radius: 6px; color: var(--provider-muted); background: var(--provider-bg); font-size: 12px; text-align: center; }
@@ -70,36 +86,46 @@
 .gonavi-ai-provider-editor { min-width: 0; min-height: 0; flex: 1; display: flex; flex-direction: column; container-type: inline-size; container-name: provider-editor; }
 .gonavi-ai-provider-editor-empty { flex: 1; display: grid; place-items: center; text-align: center; color: var(--provider-muted); font-size: 13px; padding: 30px; }
 .gonavi-ai-provider-editor > .gonavi-ai-provider-form { display: flex; flex-direction: column; min-height: 0; height: 100%; }
-.gonavi-ai-provider-editor-scroll { min-height: 0; flex: 1; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; padding: 1px 5px 12px 1px; scrollbar-width: thin; }
-.gonavi-ai-provider-editor-heading { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+.gonavi-ai-provider-editor-scroll { min-height: 0; flex: 1; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; padding: 1px 5px 6px 1px; scrollbar-width: thin; }
+.gonavi-ai-provider-editor-heading { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+/* One hover icon replaces the stacked note blocks that used to sit between fields. */
+.gonavi-ai-provider-hint { flex-shrink: 0; display: inline-grid; place-items: center; width: 20px; height: 20px; padding: 0; border: 0; border-radius: 5px; color: var(--provider-muted); background: transparent; cursor: help; font-size: 13px; }
+.gonavi-ai-provider-hint:hover, .gonavi-ai-provider-hint:focus-visible { color: var(--provider-active); background: var(--provider-active-bg); }
+.gonavi-ai-provider-hint-body { display: grid; gap: 4px; max-width: 24em; font-size: 11px; line-height: 1.5; }
+.gonavi-ai-provider-hint-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .gonavi-ai-provider-editor-heading > div { display: grid; gap: 2px; min-width: 0; flex: 1; }
 .gonavi-ai-provider-editor-heading strong { font-size: 14px; overflow-wrap: anywhere; }
 .gonavi-ai-provider-editor-heading > div > span { font-size: 11px; color: var(--provider-muted); }
 .gonavi-ai-provider-editor-heading > .ant-btn { flex-shrink: 0; padding-inline: 5px; font-size: 11px; }
-.gonavi-ai-provider-configured-note { padding: 9px 10px; margin-bottom: 13px; font-size: 11px; line-height: 1.55; border: 1px solid var(--provider-line); background: var(--provider-active-bg); border-radius: 6px; color: var(--provider-muted); }
-.gonavi-ai-provider-configured-note .anticon { color: var(--provider-active); }
 .gonavi-ai-provider-editor .gonavi-ai-provider-field-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); gap: 0 12px; }
-.gonavi-ai-provider-editor .gonavi-ai-provider-field-grid > .ant-form-item { margin-bottom: 12px; min-width: 0; }
-.gonavi-ai-provider-editor .ant-form-item-label { padding-bottom: 5px; }
+.gonavi-ai-provider-editor .gonavi-ai-provider-field-grid > .ant-form-item { margin-bottom: 8px; min-width: 0; }
+.gonavi-ai-provider-editor .ant-form-item-label { padding-bottom: 2px; }
 .gonavi-ai-provider-editor .ant-form-item-label > label { width: 100%; font-size: 12px; }
 .gonavi-ai-provider-editor .ant-input, .gonavi-ai-provider-editor .ant-select, .gonavi-ai-provider-editor .ant-select-selection-placeholder { font-size: 12px; }
 .gonavi-ai-provider-editor .ant-select { width: 100%; }
 .gonavi-ai-provider-editor .ant-form-item-extra { font-size: 11px; }
 .gonavi-ai-provider-model-label { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; }
 .gonavi-ai-provider-model-label button { padding: 1px 0; border: 0; color: var(--provider-active); background: transparent; cursor: pointer; white-space: nowrap; font-size: 10px; }
-.gonavi-ai-provider-model-hint, .gonavi-ai-provider-detail-note { color: var(--provider-muted); font-size: 11px; line-height: 1.6; margin: 0 0 10px; }
 .gonavi-ai-provider-editor details { border-top: 1px solid var(--provider-line); }
-.gonavi-ai-provider-editor summary { padding: 11px 1px; color: var(--provider-muted); cursor: pointer; font-size: 12px; }
-.gonavi-ai-provider-actions { flex-shrink: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; border-top: 1px solid var(--provider-line); padding: 10px 0 2px; margin-top: 0; }
-.gonavi-ai-provider-check-action { display: flex; align-items: center; gap: 8px; }
+.gonavi-ai-provider-editor summary { display: flex; align-items: center; gap: 4px; padding: 7px 1px; color: var(--provider-muted); cursor: pointer; font-size: 12px; }
+/* Test, its result and save stay on one line; the result truncates instead of
+   wrapping, so the row never steals a second line from the form above it. */
+.gonavi-ai-provider-actions { flex-shrink: 0; display: flex; flex-wrap: nowrap; align-items: center; gap: 8px; border-top: 1px solid var(--provider-line); padding: 8px 0 0; margin-top: 0; }
+.gonavi-ai-provider-check-action { flex-shrink: 0; display: flex; align-items: center; gap: 8px; }
 .gonavi-ai-provider-check-action small { font-size: 10px; color: var(--provider-muted); }
 /* Save is the primary action; save-as lives in its dropdown and is absent for
    singleton CLI presets, so the row keeps one button width either way. */
 .gonavi-ai-provider-save-actions { margin-left: auto; display: flex; align-items: center; }
 .gonavi-ai-provider-save-actions > .ant-btn, .gonavi-ai-provider-save-actions .ant-dropdown-button > .ant-btn:first-child { min-width: 88px; }
+/* Space.Compact leaves both halves fully rounded, which pinches the middle into an
+   hourglass. Square the facing corners and separate them with a hairline instead. */
+.gonavi-ai-provider-save-actions .ant-dropdown-button { display: inline-flex; }
+.gonavi-ai-provider-save-actions .ant-dropdown-button > .ant-btn:first-child { border-start-end-radius: 0; border-end-end-radius: 0; }
+.gonavi-ai-provider-save-actions .ant-dropdown-button > .ant-btn:last-child { border-start-start-radius: 0; border-end-start-radius: 0; padding-inline: 7px; box-shadow: inset 1px 0 rgba(255, 255, 255, .3); }
+.gonavi-ai-provider-save-actions .ant-dropdown-button > .ant-btn:last-child .anticon { font-size: 10px; }
 .gonavi-ai-provider-save-as-item { display: grid; gap: 2px; max-width: 16em; }
 .gonavi-ai-provider-save-as-item > small { color: var(--provider-muted); font-size: 10px; line-height: 1.45; white-space: normal; }
-.gonavi-ai-provider-test-result { flex: 1 1 120px; min-width: 0; overflow-wrap: anywhere; color: var(--provider-muted); font-size: 11px; }
+.gonavi-ai-provider-test-result { flex: 1 1 60px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--provider-muted); font-size: 11px; }
 .gonavi-ai-provider-test-result .anticon { color: var(--provider-active); }
 .gonavi-ai-provider-test-result[data-error='true'] { color: var(--gn-danger, #cf4343); }
 /* The drawer fills the workspace instead of leaving the scrim bare on its right.
@@ -109,7 +135,11 @@
 .is-drawer-open > .gonavi-ai-provider-editor { visibility: hidden; }
 .gonavi-ai-provider-scrim { position: absolute; z-index: 2; inset: 0; background: #0003; border: 0; }
 .gonavi-ai-provider-management button:focus-visible, .gonavi-ai-provider-resizer:focus-visible { outline: 2px solid var(--provider-active); outline-offset: 2px; }
+/* Everything above the workspace is fixed chrome, so each pixel trimmed here is a
+   pixel the editor gains. The shell values arrive inline, hence !important. */
+.gonavi-provider-settings-host .gonavi-settings-center-pane-heading { padding-bottom: 4px !important; }
 .gonavi-provider-settings-host .gonavi-settings-center-pane-heading > div { display: flex; align-items: baseline; flex-wrap: wrap; column-gap: 12px; }
+.gonavi-provider-settings-host .gonavi-settings-center-content { gap: 8px !important; }
 @media (max-width: 1100px) {
   .gonavi-provider-settings-host .gonavi-settings-center-layout { grid-template-columns: 60px minmax(0, 1fr) !important; gap: 12px !important; }
   .gonavi-provider-settings-host .gonavi-settings-center-groups { padding-right: 8px !important; }
@@ -164,4 +194,5 @@
 @media (prefers-reduced-motion: reduce) {
   .gonavi-ai-model-switch, .gonavi-ai-model-switch::after, .gonavi-ai-model-management button { transition: none; }
   .gonavi-ai-model-management button:active { transform: none; }
+  .gonavi-ai-provider-chip-remove:hover, .gonavi-ai-provider-chip-remove:focus-visible { animation: none; transform: scale(1.2); }
 }

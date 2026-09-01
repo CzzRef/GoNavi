@@ -7,7 +7,8 @@ const bridge = vi.hoisted(() => ({ capabilities: vi.fn(), models: vi.fn() }));
 vi.mock('../../../wailsjs/go/aiservice/Service', () => ({ AIGetCLICapabilities: bridge.capabilities, AIGetCLIModelCatalog: bridge.models }));
 vi.mock('@ant-design/icons', () => Object.fromEntries([
   'ApiOutlined', 'AppstoreOutlined', 'CheckOutlined', 'DeleteOutlined', 'EditOutlined', 'EyeInvisibleOutlined', 'EyeOutlined', 'KeyOutlined', 'LinkOutlined',
-  'LoadingOutlined', 'PlusOutlined', 'RobotOutlined', 'SearchOutlined', 'CloudOutlined', 'ExperimentOutlined', 'ThunderboltOutlined',
+  'LoadingOutlined', 'PlusOutlined', 'RobotOutlined', 'SearchOutlined', 'CloudOutlined', 'ExperimentOutlined', 'ThunderboltOutlined', 'InfoCircleOutlined',
+  'DownOutlined', 'RightOutlined', 'LeftOutlined', 'CloseOutlined',
 ].map((name) => [name, () => <i aria-hidden="true" />])));
 vi.mock('antd', () => {
   const Input = Object.assign((props: any) => <input {...props} />, { Password: (props: any) => <input {...props} /> });
@@ -21,7 +22,8 @@ vi.mock('antd', () => {
     Button: ({ children, ...props }: any) => <button {...props}>{children}</button>,
     Space: ({ children, ...props }: any) => <div {...props}>{children}</div>,
     Tooltip: ({ children }: any) => <>{children}</>,
-    Popconfirm: ({ children }: any) => <>{children}</>,
+    // Kept as an element so tests can reach onConfirm without a real popup.
+    Popconfirm: ({ children, ...props }: any) => <span data-popconfirm="true" {...props}>{children}</span>,
     // Flatten the dropdown so its menu entries stay reachable as plain buttons.
     Dropdown: Object.assign(({ children }: any) => <>{children}</>, {
       Button: ({ children, menu, ...props }: any) => <>
@@ -34,7 +36,7 @@ vi.mock('antd', () => {
     }),
   };
 });
-import AISettingsProvidersSection from './AISettingsProvidersSection';
+import AISettingsProvidersSection, { REVEAL_ERROR_SELECTOR, revealFirstErrorIn } from './AISettingsProvidersSection';
 import { findPreset, PROVIDER_PRESETS } from './aiSettingsModalConfig';
 
 const deferred = <T,>() => {
@@ -50,6 +52,11 @@ const presets = [
 const capability = { apiFormat: 'grok-cli', command: 'grok', supportsModelDiscovery: true, supportsEffort: true, effortValues: ['low', 'high'], effortValuesVerified: true, defaultModel: 'configured-model', defaultEffort: 'high' };
 const renderedText = (node: any): string => typeof node === 'string' ? node
   : Array.isArray(node) ? node.map(renderedText).join(' ') : renderedText(node?.children || []);
+// Field hints now live in one hover icon per heading rather than as note blocks in
+// the flow, so their text is read off the Tooltip title instead of the rendered tree.
+const elementText = (node: any): string => node === null || node === undefined || node === false || node === true ? ''
+  : typeof node === 'string' || typeof node === 'number' ? String(node)
+    : Array.isArray(node) ? node.map(elementText).join(' ') : elementText(node?.props?.children);
 
 describe('provider settings mounted controls', () => {
   let renderer: ReactTestRenderer | undefined;
@@ -72,6 +79,8 @@ describe('provider settings mounted controls', () => {
   const connectionDetails = () => renderer!.root.findByProps({ className: 'gonavi-ai-cli-details' });
   const hiddenFolder = () => renderer!.root.findByProps({ className: 'gonavi-ai-provider-hidden-toggle' });
   const visibilityAction = (label: string) => renderer!.root.findByProps({ 'aria-label': label });
+  const hintText = () => renderer!.root.findAll((node) => node.props?.title?.props?.className === 'gonavi-ai-provider-hint-body')
+    .map((node) => elementText(node.props.title)).join(' ');
   beforeEach(() => {
     vi.resetAllMocks();
     stored = new Map();
@@ -96,6 +105,96 @@ describe('provider settings mounted controls', () => {
     };
   });
   afterEach(async () => { await act(async () => { renderer?.unmount(); }); renderer = undefined; vi.unstubAllGlobals(); });
+
+  // The reveal must move only the editor's own scrollTop: scrollIntoView would also
+  // scroll the overflow-hidden settings panes, which then cannot be scrolled back.
+  it('scrolls only its own container and reports when there is no error', () => {
+    const scrollTo = vi.fn();
+    const container = {
+      scrollTop: 40, clientHeight: 300, scrollTo,
+      getBoundingClientRect: () => ({ top: 100 }),
+      querySelector: vi.fn(() => ({ getBoundingClientRect: () => ({ top: 520, height: 40 }) })),
+    };
+
+    expect(revealFirstErrorIn(container)).toBe(true);
+    expect(container.querySelector).toHaveBeenCalledWith(REVEAL_ERROR_SELECTOR);
+    // 40 + (520 - 100) - (300 - 40) / 2 = 330
+    expect(scrollTo).toHaveBeenCalledWith({ top: 330, behavior: 'smooth' });
+
+    expect(revealFirstErrorIn({ ...container, querySelector: () => null })).toBe(false);
+    expect(revealFirstErrorIn(null)).toBe(false);
+    // Both antd field errors and the standalone alerts must be reachable.
+    expect(REVEAL_ERROR_SELECTOR).toContain('.ant-form-item-has-error');
+    expect(REVEAL_ERROR_SELECTOR).toContain('[role="alert"]');
+  });
+
+  it('never scrolls above the top of its container', () => {
+    const scrollTo = vi.fn();
+    revealFirstErrorIn({
+      scrollTop: 0, clientHeight: 300, scrollTo,
+      getBoundingClientRect: () => ({ top: 100 }),
+      querySelector: () => ({ getBoundingClientRect: () => ({ top: 110, height: 40 }) }),
+    });
+    expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' });
+  });
+
+  it('renders collapse carets as icons in a fixed box rather than bare glyphs', async () => {
+    await render({ isEditing: false, editingProvider: null });
+
+    const carets = renderer!.root.findAllByProps({ className: 'gonavi-ai-provider-caret' });
+    expect(carets.length).toBeGreaterThanOrEqual(2);
+    for (const caret of carets) {
+      expect(caret.props['aria-hidden']).toBe('true');
+      // A glyph would render as a string child; an icon renders as an element.
+      expect(typeof caret.props.children).not.toBe('string');
+    }
+  });
+
+  // Deleting a saved configuration is destructive, so the chip corner control must
+  // still confirm, and must go quiet while another change is in flight.
+  it('deletes a saved configuration from its chip after confirming', async () => {
+    await render({ isEditing: false, editingProvider: null });
+
+    const remove = renderer!.root.findByProps({ 'aria-label': 'Delete: Personal alias' });
+    expect(remove.props.className).toBe('gonavi-ai-provider-chip-remove');
+    expect(remove.props.disabled).toBe(false);
+    const confirm = renderer!.root.findAll((node) => node.props?.['data-popconfirm'] === 'true'
+      && node.props?.okText === 'Delete' && elementText(node.props.children).length >= 0)
+      .find((node) => node.props.children?.props?.['aria-label'] === 'Delete: Personal alias')!;
+    expect(confirm.props.title).toBe('Delete this provider?');
+
+    await act(async () => confirm.props.onConfirm());
+    expect(props.onDeleteProvider).toHaveBeenCalledWith('a');
+    expect(props.onSetActiveProvider).not.toHaveBeenCalled();
+    expect(props.onEditProvider).not.toHaveBeenCalled();
+  });
+
+  it('disables the chip delete while another provider change is pending', async () => {
+    await render({ isEditing: false, editingProvider: null, pendingProviderId: 'b' });
+
+    for (const name of ['Work alias', 'Personal alias']) {
+      expect(renderer!.root.findByProps({ 'aria-label': `Delete: ${name}` }).props.disabled).toBe(true);
+    }
+  });
+
+  // Hints were full-width note blocks between the fields; on a short settings pane
+  // they pushed the form out of view. They now collapse into one icon per heading.
+  it('collapses field hints into heading icons instead of note blocks in the flow', async () => {
+    await render({ isEditing: true, editingProvider: { ...props.providers[1] } });
+
+    for (const dead of ['gonavi-ai-provider-configured-note', 'gonavi-ai-provider-model-hint', 'gonavi-ai-provider-detail-note']) {
+      expect(renderer!.root.findAllByProps({ className: dead })).toHaveLength(0);
+    }
+    const icons = renderer!.root.findAllByProps({ className: 'gonavi-ai-provider-hint' });
+    expect(icons.length).toBeGreaterThanOrEqual(2);
+    expect(hintText()).toContain('Reuses local CLI sign-in');
+
+    // The icon sits inside a <summary>; clicking it must not toggle that section.
+    const click = { preventDefault: vi.fn(), stopPropagation: vi.fn() };
+    await act(async () => icons[icons.length - 1].props.onClick(click));
+    expect(click.preventDefault).toHaveBeenCalledOnce();
+    expect(click.stopPropagation).toHaveBeenCalledOnce();
+  });
 
   // Save-as duplicates a configuration. A singleton CLI preset reuses one machine
   // login, so it must not offer the entry at all; multi-instance providers keep it
@@ -309,7 +408,9 @@ describe('provider settings mounted controls', () => {
     await act(async () => grok.props.onClick());
     expect(props.onEditProvider).toHaveBeenCalledWith(props.providers[1]);
     expect(props.onAddProvider).not.toHaveBeenCalled();
-    expect(renderedText(renderer!.root.findByProps({ className: 'gonavi-ai-provider-configured-note' }))).toContain('Reuses local CLI sign-in');
+    expect(renderedText(grok)).not.toContain('Added');
+    expect(renderer!.root.findAllByProps({ className: 'gonavi-ai-provider-catalog-check' }).length).toBeGreaterThan(0);
+    expect(hintText()).toContain('Reuses local CLI sign-in');
   });
 
   it('blocks a stale new CLI draft after another record has been added', async () => {
@@ -345,7 +446,7 @@ describe('provider settings mounted controls', () => {
     await render({ isEditing: true, providers: [], editingProvider: { id: '' } });
     const input = modelPickers()[0];
     expect(input.props.disabled).not.toBe(true);
-    expect(renderedText(renderer!.toJSON())).toContain('You can enter a model manually');
+    expect(hintText()).toContain('You can enter a model manually');
     expect(values).toMatchObject({ model: 'typed-model', models: ['my-model'], effort: 'low' });
     expect(props.form.setFieldsValue).not.toHaveBeenCalled();
   });
@@ -384,7 +485,7 @@ describe('provider settings mounted controls', () => {
     }
     expect(values.model).toBe('typed-model');
     expect(props.form.setFieldsValue).not.toHaveBeenCalled();
-    expect(renderedText(renderer!.toJSON())).toContain('local Codex cache');
+    expect(hintText()).toContain('local Codex cache');
     expect(connectionDetails().props.open).toBe(false);
   });
 
@@ -393,7 +494,7 @@ describe('provider settings mounted controls', () => {
     await render({ isEditing: true, editingProvider: { id: 'b' }, watchedPresetKey: 'codex', watchedApiFormat: 'codex-cli' });
     expect(modelPickers()[0].props.options).not.toContainEqual({ value: 'stale-model', label: 'stale-model' });
     expect(modelPickers()[0].props.options).toContainEqual({ value: 'typed-model', label: 'typed-model' });
-    expect(renderedText(renderer!.toJSON())).toContain('catalog is outdated');
+    expect(hintText()).toContain('catalog is outdated');
     expect(props.form.setFieldsValue).not.toHaveBeenCalled();
   });
 
@@ -416,7 +517,7 @@ describe('provider settings mounted controls', () => {
       expect(control.props.options).toEqual(expect.arrayContaining(['sonnet', 'opus', 'haiku'].map((value) => ({ label: value, value }))));
       if (savedModel) expect(control.props.options).toContainEqual({ label: savedModel, value: savedModel });
     }
-        expect(renderedText(renderer!.toJSON())).toContain('Common Claude aliases');
+        expect(hintText()).toContain('Common Claude aliases');
     expect(modelPickers()[0].props.placeholder).toContain('CLI default');
     expect(connectionDetails().props.open).toBe(false);
     expect(values.model).toBe(savedModel);
@@ -445,7 +546,7 @@ describe('provider settings mounted controls', () => {
     const effort = renderer!.root.findByProps({ 'data-field': 'effort' }).findByType('input');
     expect(effort.props.disabled).toBe(true);
     expect(effort.props.placeholder).toBe('This CLI has no effort selector');
-    expect(renderedText(renderer!.root.findByProps({ className: 'gonavi-ai-provider-configured-note' }))).toContain('Native Cursor hooks and plugins can still run');
+    expect(hintText()).toContain('Native Cursor hooks and plugins can still run');
     expect(connectionDetails().props.open).toBe(false);
     expect(values.model).toBe('my-custom-model');
     expect(props.form.setFieldsValue).not.toHaveBeenCalled();
@@ -507,12 +608,17 @@ describe('provider settings mounted controls', () => {
 
   it('leaves the test button label unchanged and renders the result next to it', async () => {
     await render({ isEditing: true, editingProvider: { id: 'a' }, loading: true, testStatus: 'success', testResult: { success: true, checkKind: 'local-auth', modelVerified: false, message: 'fixture' } });
+    // Both handlers are wrapped so a rejected attempt can scroll its error into
+    // view, so they are located by label rather than by callback identity.
     const buttons = renderer!.root.findAllByType('button');
-    const check = buttons.find((button) => button.props.onClick === props.onTestProvider)!;
-    const save = buttons.find((button) => button.props.onClick === props.onSaveProvider)!;
+    const check = buttons.find((button) => renderedText(button) === 'Test connection')!;
+    const save = buttons.find((button) => renderedText(button) === 'Save changes')!;
     expect(check.children).toEqual(['Test connection']);
     expect(check.props.loading).toBe(false);
     expect(save.props.loading).toBe(true);
+    await act(async () => { check.props.onClick(); save.props.onClick(); });
+    expect(props.onTestProvider).toHaveBeenCalledOnce();
+    expect(props.onSaveProvider).toHaveBeenCalledOnce();
     expect(renderedText(renderer!.root.findByProps({ className: 'gonavi-ai-provider-test-result' }))).toContain('model response not verified');
   });
 

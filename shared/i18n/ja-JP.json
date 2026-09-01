@@ -1733,6 +1733,7 @@
   "ai_settings.form.display_name": "表示名（任意）",
   "ai_settings.form.default_model": "既定のモデル",
   "ai_settings.form.more_settings": "詳細設定",
+  "ai_settings.form.hint_label": "説明",
   "ai_settings.form.favorite_models": "チャットでよく使うモデル",
   "ai_settings.form.model_use_custom": "カスタムモデルを使用:",
   "ai_settings.form.model_catalog.cache": "候補はローカルの Codex キャッシュから取得しています。アカウントの利用権限やモデルの応答は未確認です。",

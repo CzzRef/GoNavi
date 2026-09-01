@@ -1733,6 +1733,7 @@
   "ai_settings.form.display_name": "Anzeigename (optional)",
   "ai_settings.form.default_model": "Standardmodell",
   "ai_settings.form.more_settings": "Weitere Einstellungen",
+  "ai_settings.form.hint_label": "Hinweis",
   "ai_settings.form.favorite_models": "Bevorzugte Chatmodelle",
   "ai_settings.form.model_use_custom": "Eigenes Modell verwenden:",
   "ai_settings.form.model_catalog.cache": "Vorschläge stammen aus dem lokalen Codex-Cache. Kontozugriff und Modellantworten sind nicht geprüft.",

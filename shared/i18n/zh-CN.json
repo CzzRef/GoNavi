@@ -1733,6 +1733,7 @@
   "ai_settings.form.display_name": "显示名称（可选）",
   "ai_settings.form.default_model": "默认模型",
   "ai_settings.form.more_settings": "更多设置",
+  "ai_settings.form.hint_label": "说明",
   "ai_settings.form.favorite_models": "聊天常用模型",
   "ai_settings.form.model_use_custom": "使用自定义模型：",
   "ai_settings.form.model_catalog.cache": "候选模型来自本机 Codex 缓存，未验证账号可用性或模型响应。",
