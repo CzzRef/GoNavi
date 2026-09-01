@@ -1489,6 +1489,7 @@ export namespace app {
 	}
 	export class NacosServiceQuery {
 	    namespaceId: string;
+	    serviceName?: string;
 	    groupName?: string;
 	    pageNo?: number;
 	    pageSize?: number;
@@ -1500,6 +1501,7 @@ export namespace app {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.namespaceId = source["namespaceId"];
+	        this.serviceName = source["serviceName"];
 	        this.groupName = source["groupName"];
 	        this.pageNo = source["pageNo"];
 	        this.pageSize = source["pageSize"];
@@ -2298,14 +2300,61 @@ export namespace connection {
 		    return a;
 		}
 	}
-	
+	export class ConnectionHealthRun {
+	    runId: string;
+	    status: string;
+	    total: number;
+	    completed: number;
+	    reports: ConnectionHealthReport[];
+	    currentConnectionId?: string;
+	    remainingConnectionIds: string[];
+	    cancelRequested: boolean;
+
+	    static createFrom(source: any = {}) {
+	        return new ConnectionHealthRun(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.runId = source["runId"];
+	        this.status = source["status"];
+	        this.total = source["total"];
+	        this.completed = source["completed"];
+	        this.reports = this.convertValues(source["reports"], ConnectionHealthReport);
+	        this.currentConnectionId = source["currentConnectionId"];
+	        this.remainingConnectionIds = source["remainingConnectionIds"];
+	        this.cancelRequested = source["cancelRequested"];
+	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+
 	export class ConnectionTag {
 	    id: string;
 	    name: string;
+	    createdAt?: number;
 	    parentTagId?: string;
 	    connectionIds: string[];
 	    childOrder?: string[];
-	
+	    sortMode?: string;
+	    connectionSortMode?: string;
+
 	    static createFrom(source: any = {}) {
 	        return new ConnectionTag(source);
 	    }
@@ -2314,9 +2363,12 @@ export namespace connection {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
 	        this.name = source["name"];
+	        this.createdAt = source["createdAt"];
 	        this.parentTagId = source["parentTagId"];
 	        this.connectionIds = source["connectionIds"];
 	        this.childOrder = source["childOrder"];
+	        this.sortMode = source["sortMode"];
+	        this.connectionSortMode = source["connectionSortMode"];
 	    }
 	}
 	export class ConnectionSidebarLayout {
@@ -2324,7 +2376,9 @@ export namespace connection {
 	    revision: number;
 	    connectionTags: ConnectionTag[];
 	    sidebarRootOrder: string[];
-	
+	    rootSortMode?: string;
+	    rootConnectionSortMode?: string;
+
 	    static createFrom(source: any = {}) {
 	        return new ConnectionSidebarLayout(source);
 	    }
@@ -2335,6 +2389,8 @@ export namespace connection {
 	        this.revision = source["revision"];
 	        this.connectionTags = this.convertValues(source["connectionTags"], ConnectionTag);
 	        this.sidebarRootOrder = source["sidebarRootOrder"];
+	        this.rootSortMode = source["rootSortMode"];
+	        this.rootConnectionSortMode = source["rootConnectionSortMode"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -2358,7 +2414,9 @@ export namespace connection {
 	export class ConnectionSidebarLayoutInput {
 	    connectionTags: ConnectionTag[];
 	    sidebarRootOrder: string[];
-	
+	    rootSortMode?: string;
+	    rootConnectionSortMode?: string;
+
 	    static createFrom(source: any = {}) {
 	        return new ConnectionSidebarLayoutInput(source);
 	    }
@@ -2367,6 +2425,8 @@ export namespace connection {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.connectionTags = this.convertValues(source["connectionTags"], ConnectionTag);
 	        this.sidebarRootOrder = source["sidebarRootOrder"];
+	        this.rootSortMode = source["rootSortMode"];
+	        this.rootConnectionSortMode = source["rootConnectionSortMode"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -2441,6 +2501,20 @@ export namespace connection {
 		    }
 		    return a;
 		}
+	}
+	export class DeleteConnectionGroupInput {
+	    tagId: string;
+	    expectedRevision: number;
+
+	    static createFrom(source: any = {}) {
+	        return new DeleteConnectionGroupInput(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.tagId = source["tagId"];
+	        this.expectedRevision = source["expectedRevision"];
+	    }
 	}
 	export class GlobalProxyView {
 	    enabled: boolean;
@@ -2617,6 +2691,7 @@ export namespace connection {
 	export class SavedConnectionInput {
 	    id?: string;
 	    name: string;
+	    createdAt?: number;
 	    environmentType?: string;
 	    config: ConnectionConfig;
 	    includeDatabases?: string[];
@@ -2649,6 +2724,7 @@ export namespace connection {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
 	        this.name = source["name"];
+	        this.createdAt = source["createdAt"];
 	        this.environmentType = source["environmentType"];
 	        this.config = this.convertValues(source["config"], ConnectionConfig);
 	        this.includeDatabases = source["includeDatabases"];
@@ -2695,6 +2771,7 @@ export namespace connection {
 	export class SavedConnectionView {
 	    id: string;
 	    name: string;
+	    createdAt?: number;
 	    environmentType?: string;
 	    config: ConnectionConfig;
 	    includeDatabases?: string[];
@@ -2728,6 +2805,7 @@ export namespace connection {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
 	        this.name = source["name"];
+	        this.createdAt = source["createdAt"];
 	        this.environmentType = source["environmentType"];
 	        this.config = this.convertValues(source["config"], ConnectionConfig);
 	        this.includeDatabases = source["includeDatabases"];

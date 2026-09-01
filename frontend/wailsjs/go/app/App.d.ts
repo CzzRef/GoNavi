@@ -39,6 +39,8 @@ export function CancelQuery(arg1:string):Promise<connection.QueryResult>;
 
 export function CancelSQLFileExecution(arg1:string):Promise<connection.QueryResult>;
 
+export function CancelSavedConnectionsHealthRun(arg1:string):Promise<connection.ConnectionHealthRun>;
+
 export function CheckDriverNetworkStatus():Promise<connection.QueryResult>;
 
 export function CheckForUpdates():Promise<connection.QueryResult>;
@@ -225,6 +227,10 @@ export function DataSyncSchedulePreview(arg1:syncjob.JobDefinition,arg2:number):
 
 export function DeleteConnection(arg1:string):Promise<void>;
 
+export function DeleteConnectionGroup(arg1:connection.DeleteConnectionGroupInput):Promise<void>;
+
+export function DeleteConnections(arg1:Array<string>):Promise<void>;
+
 export function DeleteImportJob(arg1:string):Promise<connection.QueryResult>;
 
 export function DeleteQuery(arg1:string):Promise<void>;
@@ -334,6 +340,8 @@ export function GetSQLAuditHealth():Promise<connection.QueryResult>;
 export function GetSQLAuditSettings():Promise<connection.QueryResult>;
 
 export function GetSavedConnections():Promise<Array<connection.SavedConnectionView>>;
+
+export function GetSavedConnectionsHealthRun(arg1:string):Promise<connection.ConnectionHealthRun>;
 
 export function GetSavedQueries():Promise<Array<connection.SavedQuery>>;
 
@@ -692,6 +700,8 @@ export function SetWindowTranslucency(arg1:number,arg2:number):Promise<void>;
 export function Shutdown():Promise<void>;
 
 export function StartDriverPackageDownload(arg1:string,arg2:string,arg3:string,arg4:string):Promise<connection.QueryResult>;
+
+export function StartSavedConnectionsHealthRun(arg1:Array<string>):Promise<connection.ConnectionHealthRun>;
 
 export function StartSecurityUpdate(arg1:app.StartSecurityUpdateRequest):Promise<app.SecurityUpdateStatus>;
 

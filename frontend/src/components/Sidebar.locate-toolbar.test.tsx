@@ -1,6 +1,7 @@
 import React from 'react';
 import { readFileSync } from 'node:fs';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { createRenderer as createShallowRenderer } from 'react-test-renderer/shallow';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { readV2ThemeCss } from '../test/readV2ThemeCss';
 
@@ -22,7 +23,6 @@ import Sidebar, {
   isConnectionTagDescendant,
   normalizeSidebarTreeRelativeDropPosition,
   parseV2CommandSearchQuery,
-  resolveV2CommandSearchPersistentFilter,
   type V2CommandSearchItem,
   resolveSidebarDropNodeFromDomEvent,
   resolveSidebarDropDomHit,
@@ -37,6 +37,7 @@ import Sidebar, {
   resolveV2ObjectGroupTitle,
   isSidebarTablePinned,
   SQLFileExecutionProgressContent,
+  V2ExplorerContextSummary,
   resolveSidebarTableNameForCopy,
   resolveSidebarDatabaseNameForCopy,
   shouldKeepSidebarSwitcherCollapsedWhileLoading,
@@ -484,29 +485,6 @@ describe('Sidebar locate toolbar', () => {
     })).toBe(false);
   });
 
-  it('keeps v2 command search persisted filter after closing the palette', () => {
-    expect(resolveV2CommandSearchPersistentFilter({
-      commandSearchValue: '  org  ',
-      persistedFilter: '',
-      enabled: true,
-      isOpen: true,
-    })).toBe('org');
-
-    expect(resolveV2CommandSearchPersistentFilter({
-      commandSearchValue: '',
-      persistedFilter: 'org',
-      enabled: true,
-      isOpen: false,
-    })).toBe('org');
-
-    expect(resolveV2CommandSearchPersistentFilter({
-      commandSearchValue: 'org',
-      persistedFilter: 'org',
-      enabled: false,
-      isOpen: true,
-    })).toBe('');
-  });
-
   it('closes v2 command search on global escape only while the palette is open', () => {
     expect(shouldCloseV2CommandSearchOnGlobalKey({
       key: 'Escape',
@@ -721,6 +699,35 @@ describe('Sidebar locate toolbar', () => {
     expect(isConnectionTagDescendant('group-1-1', 'group-1', tags)).toBe(false);
   });
 
+  it('keeps sibling group token order even when legacy automatic modes are present', () => {
+    const tags = [
+      { id: 'parent', name: 'Parent', sortMode: 'name', connectionIds: [], childOrder: ['tag:child-z', 'tag:child-a'] },
+      { id: 'child-z', name: 'Zebra child', createdAt: 2, parentTagId: 'parent', connectionIds: [] },
+      { id: 'child-a', name: 'Alpha child', createdAt: 1, parentTagId: 'parent', connectionIds: [] },
+      { id: 'root-z', name: 'Zebra root', createdAt: 2, connectionIds: [] },
+      { id: 'root-a', name: 'Alpha root', createdAt: 1, connectionIds: [] },
+    ] as any[];
+    const outline = (items: ReturnType<typeof buildSidebarConnectionTagTree>): unknown[] => items.map((item) => (
+      item.kind === 'connection' ? item.id : { id: item.id, children: outline(item.children) }
+    ));
+
+    expect(outline(buildSidebarConnectionTagTree([], tags, ['tag:root-z', 'tag:parent', 'tag:root-a'], 'manual'))).toEqual([
+      { id: 'root-z', children: [] },
+      { id: 'parent', children: [{ id: 'child-z', children: [] }, { id: 'child-a', children: [] }] },
+      { id: 'root-a', children: [] },
+    ]);
+    expect(outline(buildSidebarConnectionTagTree([], tags, ['tag:root-z', 'tag:parent', 'tag:root-a'], 'name'))).toEqual([
+      { id: 'root-z', children: [] },
+      { id: 'parent', children: [{ id: 'child-z', children: [] }, { id: 'child-a', children: [] }] },
+      { id: 'root-a', children: [] },
+    ]);
+    expect(outline(buildSidebarConnectionTagTree([], tags, ['tag:root-a', 'tag:parent', 'tag:root-z'], 'createdAt'))).toEqual([
+      { id: 'root-a', children: [] },
+      { id: 'parent', children: [{ id: 'child-z', children: [] }, { id: 'child-a', children: [] }] },
+      { id: 'root-z', children: [] },
+    ]);
+  });
+
   it('keeps malformed group parents and parent cycles visible at the root', () => {
     const tags = [
       { id: 'a', name: 'A', parentTagId: 'b', connectionIds: [] },
@@ -883,27 +890,42 @@ describe('Sidebar locate toolbar', () => {
     expect(markup).toContain('data-sidebar-legacy-toolbar-item="true"');
   });
 
-  it('renders exactly six expanded v2 titlebar actions in task order', () => {
+  it('renders exactly seven expanded v2 explorer actions in task order', () => {
     const markup = renderSidebarMarkup({
       uiVersion: 'v2',
+      v2ExplorerContext: {
+        active: true,
+        connectionName: '开发环境',
+        databaseName: 'gonavi',
+        objectName: 'connections',
+        tooltip: '开发环境 · gonavi · connections',
+      },
       onCollapseSidebar: mocks.noop,
       collapseSidebarLabel: t('app.sidebar.collapse'),
       onToggleAI: mocks.noop,
       onOpenSettings: mocks.noop,
     });
-    const actionsStart = markup.indexOf('<div class="gn-v2-active-connection-actions"');
-    const actionsEnd = markup.indexOf('<div class="gn-v2-explorer-search"', actionsStart);
+    const actionsStart = markup.indexOf('<div class="gn-v2-explorer-actions"');
+    const summaryIndex = markup.indexOf('data-sidebar-active-context-summary="true"', actionsStart);
+    const commandSearchActionIndex = markup.indexOf('data-sidebar-command-search-action="true"', actionsStart);
+    const locateActionIndex = markup.indexOf('data-sidebar-locate-current-tab-action="true"', actionsStart);
+    const filtersStart = markup.indexOf('<div class="gn-v2-explorer-filter-tabs"', locateActionIndex);
 
     expect(actionsStart).toBeGreaterThanOrEqual(0);
-    expect(actionsEnd).toBeGreaterThan(actionsStart);
+    expect(summaryIndex).toBeGreaterThan(actionsStart);
+    expect(commandSearchActionIndex).toBeGreaterThan(summaryIndex);
+    expect(locateActionIndex).toBeGreaterThan(commandSearchActionIndex);
+    expect(filtersStart).toBeGreaterThan(locateActionIndex);
+    expect(markup).not.toContain('<div class="gn-v2-explorer-search"');
 
-    const actionMarkup = markup.slice(actionsStart, actionsEnd);
+    const actionMarkup = markup.slice(actionsStart, filtersStart);
     const actionLabels = Array.from(
       actionMarkup.matchAll(/<button\b[^>]*\baria-label="([^"]+)"/g),
       (match) => match[1],
     );
 
     expect(actionLabels).toEqual([
+      t('sidebar.command_search.label'),
       t('sidebar.action.locate_current_table'),
       t('sidebar.action.scroll_to_top'),
       t('sidebar.active_connection.actions'),
@@ -911,6 +933,158 @@ describe('Sidebar locate toolbar', () => {
       t('app.sidebar.settings'),
       t('app.sidebar.collapse'),
     ]);
+  });
+
+  it('reveals command-search objects with an exact-key centered tree scroll', () => {
+    const source = readSourceFile('./Sidebar.tsx');
+
+    expect(source).toContain("querySelectorAll<HTMLElement>('[data-sidebar-node-key]')");
+    expect(source).toMatch(/scrollIntoView\?\.\(\{\s*block:\s*request\.scrollBlock,\s*inline:\s*'nearest'/s);
+    expect(source).toContain("scrollSidebarTreeToKey(targetKey, 'center')");
+    expect(source).toContain("setV2ExplorerFilter('all')");
+  });
+
+  it('renders a fixed connection/database/object summary without the Host address', () => {
+    const css = readV2ThemeCss();
+    const connectionName = '飞速开发环境连接名称很长';
+    const databaseName = 'tracecode_b_database_name_is_long';
+    const objectName = 'fs_order_2026_object_name_is_long';
+    const v2ExplorerContext = {
+      active: true,
+      connectionName,
+      databaseName,
+      objectName,
+      tooltip: `${connectionName} · ${databaseName} · ${objectName}`,
+    };
+    const markup = renderSidebarMarkup({
+      uiVersion: 'v2',
+      v2ExplorerContext,
+      onCollapseSidebar: mocks.noop,
+      collapseSidebarLabel: t('app.sidebar.collapse'),
+      onToggleAI: mocks.noop,
+      onOpenSettings: mocks.noop,
+    });
+    const actionsStart = markup.indexOf('<div class="gn-v2-explorer-actions"');
+    const actionsEnd = markup.indexOf('<div class="gn-v2-explorer-filter-tabs"', actionsStart);
+    const summaryIndex = markup.indexOf('data-sidebar-active-context-summary="true"', actionsStart);
+    const locateActionIndex = markup.indexOf('data-sidebar-locate-current-tab-action="true"', actionsStart);
+    const summaryTagStart = markup.lastIndexOf('<div', summaryIndex);
+    const summaryTagEnd = markup.indexOf('>', summaryIndex);
+    const summaryOpeningTag = markup.slice(summaryTagStart, summaryTagEnd + 1);
+    const summaryMarkup = markup.slice(summaryIndex, locateActionIndex);
+    const summaryFields = Array.from(
+      summaryMarkup.matchAll(/data-sidebar-active-context-field="([^"]+)"/g),
+      (match) => match[1],
+    );
+
+    expect(actionsStart).toBeGreaterThanOrEqual(0);
+    expect(actionsEnd).toBeGreaterThan(actionsStart);
+    expect(summaryIndex).toBeGreaterThan(actionsStart);
+    expect(summaryIndex).toBeLessThan(locateActionIndex);
+    expect(summaryIndex).toBeLessThan(actionsEnd);
+    expect(summaryMarkup).not.toContain('gn-v2-explorer-context-status');
+    expect(summaryMarkup).not.toContain('gn-v2-explorer-context-status-dot');
+    expect(summaryFields).toEqual(['connection', 'database', 'object']);
+    expect(summaryMarkup).toContain(connectionName);
+    expect(summaryMarkup).toContain(databaseName);
+    expect(summaryMarkup).toContain(objectName);
+    expect(summaryMarkup).not.toContain('192.168.101.42');
+    expect(summaryOpeningTag).toMatch(/\baria-describedby=/);
+    expect(summaryOpeningTag).not.toMatch(/\btitle=/);
+
+    const shallowRenderer = createShallowRenderer();
+    shallowRenderer.render(<V2ExplorerContextSummary context={v2ExplorerContext} />);
+    const tooltipElement = shallowRenderer.getRenderOutput<React.ReactElement<{
+      title: React.ReactNode;
+      placement: string;
+      mouseEnterDelay: number;
+      rootClassName: string;
+    }>>();
+    const tooltipMarkup = renderToStaticMarkup(<>{tooltipElement.props.title}</>);
+    const tooltipFields = Array.from(
+      tooltipMarkup.matchAll(/data-sidebar-active-context-tooltip-field="([^"]+)"/g),
+      (match) => match[1],
+    );
+
+    expect(tooltipElement.props.placement).toBe('bottomLeft');
+    expect(tooltipElement.props.mouseEnterDelay).toBe(0.35);
+    expect(tooltipElement.props.rootClassName).toBe('gn-v2-explorer-context-tooltip-popup');
+    expect(tooltipMarkup).toContain('data-sidebar-active-context-tooltip="true"');
+    expect(tooltipFields).toEqual(['connection', 'database', 'object']);
+    expect(tooltipMarkup).toContain(connectionName);
+    expect(tooltipMarkup).toContain(databaseName);
+    expect(tooltipMarkup).toContain(objectName);
+    expect(tooltipMarkup).not.toContain('192.168.101.42');
+    expect(css).toMatch(/\.gn-v2-explorer-context-tooltip-popup\s*\{[^}]*max-width:\s*min\(/s);
+    expect(css).toMatch(/\.gn-v2-explorer-context-tooltip\s*\{[^}]*display:\s*flex;[^}]*flex-direction:\s*column;[^}]*overflow-wrap:\s*anywhere;/s);
+  });
+
+  it('centers a connection-only active selection within the fixed three-line context height', () => {
+    const css = readV2ThemeCss();
+    const markup = renderSidebarMarkup({
+      uiVersion: 'v2',
+      v2ExplorerContext: {
+        active: true,
+        connectionName: '开发240',
+        databaseName: '',
+        objectName: '',
+        tooltip: '开发240',
+      },
+      onCollapseSidebar: mocks.noop,
+      collapseSidebarLabel: t('app.sidebar.collapse'),
+      onToggleAI: mocks.noop,
+      onOpenSettings: mocks.noop,
+    });
+    const summaryIndex = markup.indexOf('data-sidebar-active-context-summary="true"');
+    const locateActionIndex = markup.indexOf('data-sidebar-locate-current-tab-action="true"', summaryIndex);
+    const summaryMarkup = markup.slice(summaryIndex, locateActionIndex);
+
+    expect(summaryMarkup).toContain('data-sidebar-active-context="true"');
+    expect(summaryMarkup).toContain('data-sidebar-active-context-depth="connection"');
+    expect(summaryMarkup).toContain('data-sidebar-active-context-field="database"');
+    expect(summaryMarkup).toContain('data-sidebar-active-context-field="object"');
+    expect(css).toMatch(/\.gn-v2-explorer-context-copy\s*\{[^}]*font-size:\s*var\(--gn-sidebar-tree-font-size,\s*var\(--gn-font-size-sm,\s*12px\)\);/s);
+    expect(css).toMatch(/\.gn-v2-explorer-context-copy\s*\{[^}]*min-height:\s*calc\(3\.15em \+ 2px \* var\(--gn-v2-explorer-scale\)\);/s);
+    expect(css).toMatch(/\.gn-v2-explorer-context-copy\s*\{[^}]*justify-content:\s*flex-end;/s);
+    expect(css).toMatch(/\.gn-v2-explorer-context\[data-sidebar-active-context=(["'])true\1\]\[data-sidebar-active-context-depth=(["'])connection\2\]\s+\.gn-v2-explorer-context-copy\s*\{[^}]*justify-content:\s*center;/s);
+    expect(css).toMatch(/\.gn-v2-explorer-context\[data-sidebar-active-context=(["'])true\1\]\s+\.gn-v2-explorer-context-line:empty\s*\{[^}]*display:\s*none;/s);
+    expect(css).not.toMatch(/\.gn-v2-explorer-context\[data-sidebar-active-context=(["'])false\1\]\s+\.gn-v2-explorer-context-line:empty\s*\{[^}]*display:\s*none;/s);
+  });
+
+  it('left-aligns the no-host label in the middle of the fixed three-line summary without a status dot', () => {
+    const css = readV2ThemeCss();
+    const v2ExplorerContext = {
+      active: false,
+      connectionName: '未选择 Host',
+      databaseName: '',
+      objectName: '',
+      tooltip: '未选择 Host',
+    };
+    const markup = renderSidebarMarkup({
+      uiVersion: 'v2',
+      v2ExplorerContext,
+      onCollapseSidebar: mocks.noop,
+      collapseSidebarLabel: t('app.sidebar.collapse'),
+      onToggleAI: mocks.noop,
+      onOpenSettings: mocks.noop,
+    });
+    const summaryIndex = markup.indexOf('data-sidebar-active-context-summary="true"');
+    const locateActionIndex = markup.indexOf('data-sidebar-locate-current-tab-action="true"', summaryIndex);
+    const summaryMarkup = markup.slice(summaryIndex, locateActionIndex);
+    const summaryFields = Array.from(
+      summaryMarkup.matchAll(/data-sidebar-active-context-field="([^"]+)"/g),
+      (match) => match[1],
+    );
+
+    expect(summaryIndex).toBeGreaterThanOrEqual(0);
+    expect(locateActionIndex).toBeGreaterThan(summaryIndex);
+    expect(summaryMarkup).toContain('data-sidebar-active-context="false"');
+    expect(summaryMarkup).toContain('未选择 Host');
+    expect(summaryMarkup).not.toContain('gn-v2-explorer-context-status');
+    expect(summaryMarkup).not.toContain('gn-v2-explorer-context-status-dot');
+    expect(summaryFields).toEqual(['connection', 'database', 'object']);
+    expect(css).toMatch(/\.gn-v2-explorer-context\[data-sidebar-active-context=(["'])false\1\]\s+\.gn-v2-explorer-context-copy\s*\{[^}]*align-items:\s*stretch;[^}]*text-align:\s*start;/s);
+    expect(css).toMatch(/\.gn-v2-explorer-context\[data-sidebar-active-context=(["'])false\1\]\s+\.gn-v2-explorer-context-line\.is-database\s*\{[^}]*order:\s*-1;/s);
   });
 
   it('keeps expanded v2 actions out of the collapsed-only connection rail', () => {
@@ -923,23 +1097,54 @@ describe('Sidebar locate toolbar', () => {
     expect(source.slice(propsStart, propsEnd)).toContain('showLocateAction: false');
   });
 
-  it('hides only the expanded v2 rail and wraps a narrow titlebar into two rows', () => {
+  it('keeps the expanded v2 explorer actions usable in narrow containers', () => {
     const source = readSourceFile('./Sidebar.tsx');
     const appCss = readSourceFile('../App.css');
     const css = readV2ThemeCss();
-    const narrowLayoutStart = css.indexOf('@container gn-v2-object-explorer (max-width:');
-    const narrowLayoutEnd = css.indexOf('body[data-ui-version="v2"] .gn-v2-explorer-search', narrowLayoutStart);
-
     expect(source).toContain('{isV2Ui && <SidebarConnectionRail {...v2ConnectionRailProps} />}');
     expect(appCss).toMatch(/body\[data-ui-version=(["'])v2\1\]\s+\.ant-layout-sider\[data-sidebar-collapsed=(["'])false\2\]\s+\.gn-v2-connection-rail\s*\{[^}]*display:\s*none;/s);
     expect(appCss).not.toMatch(/body\[data-ui-version=(["'])v2\1\]\s+\.ant-layout-sider\[data-sidebar-collapsed=(["'])true\2\]\s+\.gn-v2-connection-rail\s*\{[^}]*display:\s*none;/s);
-    expect(narrowLayoutStart).toBeGreaterThanOrEqual(0);
-    expect(narrowLayoutEnd).toBeGreaterThan(narrowLayoutStart);
+    expect(css).toMatch(/\.gn-v2-explorer-actions\s*\{[^}]*min-width:\s*0;[^}]*overflow-x:\s*auto;[^}]*overflow-y:\s*hidden;/s);
+    expect(css).toMatch(/\.gn-v2-explorer-actions\s*\{[^}]*border-bottom:\s*none;/s);
+    expect(css).toMatch(/\.gn-v2-explorer-actions\s*\{[^}]*min-height:\s*calc\(46px \* var\(--gn-v2-explorer-scale\)\);/s);
+    expect(css).toMatch(/\.gn-v2-explorer-context\s*\{[^}]*min-width:\s*calc\(88px \* var\(--gn-v2-explorer-scale\)\);[^}]*flex:\s*1 1 calc\(128px \* var\(--gn-v2-explorer-scale\)\);[^}]*overflow:\s*visible;/s);
+    expect(css).toMatch(/\.gn-v2-explorer-context-copy\s*\{[^}]*min-width:\s*0;[^}]*flex-direction:\s*column;[^}]*overflow:\s*hidden;/s);
+    expect(css).toMatch(/\.gn-v2-explorer-context-line\s*\{[^}]*display:\s*block;[^}]*min-width:\s*0;[^}]*min-height:\s*1em;[^}]*overflow:\s*hidden;[^}]*text-overflow:\s*ellipsis;[^}]*white-space:\s*nowrap;/s);
+    expect(css).toMatch(/@container gn-v2-object-explorer \(max-width:\s*300px\)\s*\{[^}]*\.gn-v2-explorer-actions\s*\{[^}]*justify-content:\s*flex-start;/s);
+    expect(css).toMatch(/@container gn-v2-object-explorer \(max-width:\s*300px\)\s*\{[\s\S]*?\.gn-v2-explorer-context\s*\{[^}]*min-width:\s*calc\(68px \* var\(--gn-v2-explorer-scale\)\);/s);
+    expect(css).not.toContain('.gn-v2-active-connection-header');
+  });
 
-    const narrowLayoutCss = css.slice(narrowLayoutStart, narrowLayoutEnd);
-    expect(narrowLayoutCss).toMatch(/\.gn-v2-active-connection-header\s*\{[^}]*flex-wrap:\s*wrap;/s);
-    expect(narrowLayoutCss).toMatch(/\.gn-v2-active-connection-trigger\s*\{[^}]*(?:flex-basis:\s*100%|flex:\s*[^;]*100%);/s);
-    expect(narrowLayoutCss).toMatch(/\.gn-v2-active-connection-actions\s*\{[^}]*(?:width|flex-basis):\s*100%;/s);
+  it('places driver management in the titlebar and editor tools inside More', () => {
+    const source = readSourceFile('./Sidebar.tsx');
+    const actionsStart = source.indexOf('const v2TitlebarQuickActions: TitleBarQuickAction[] = [');
+    const actionsEnd = source.indexOf('\n  ];', actionsStart);
+
+    expect(actionsStart).toBeGreaterThanOrEqual(0);
+    expect(actionsEnd).toBeGreaterThan(actionsStart);
+
+    const actionsSource = source.slice(actionsStart, actionsEnd);
+    const connectionPackageIndex = actionsSource.indexOf("key: 'connection-package'");
+    const driverIndex = actionsSource.indexOf("key: 'drivers'");
+    const workspaceIndex = actionsSource.indexOf("key: 'settings-workspace'");
+    const aboutIndex = actionsSource.indexOf("key: 'settings-about'", workspaceIndex);
+
+    expect(connectionPackageIndex).toBeGreaterThanOrEqual(0);
+    expect(driverIndex).toBeGreaterThan(connectionPackageIndex);
+    expect(workspaceIndex).toBeGreaterThan(connectionPackageIndex);
+    expect(aboutIndex).toBeGreaterThan(workspaceIndex);
+
+    const driverSource = actionsSource.slice(driverIndex, actionsSource.indexOf("key: 'open-external-sql-file'", driverIndex));
+    expect(driverSource).not.toContain("priority: 'secondary'");
+    expect(driverSource).toContain("label: t('app.tools.entry.drivers.title')");
+    expect(driverSource).toContain("pane: 'drivers'");
+
+    const workspaceSource = actionsSource.slice(workspaceIndex, aboutIndex);
+    expect(workspaceSource).toContain("priority: 'secondary'");
+    expect(workspaceSource).not.toContain("key: 'drivers'");
+    expect(workspaceSource).toContain("key: 'snippet-settings'");
+    expect(workspaceSource).toContain("key: 'shortcut-settings'");
+    expect(workspaceSource).toContain("key: 'sql-audit'");
   });
 
   it('renders the fixed v2 rail, titlebar quick actions, explorer filters and workbench actions', () => {
@@ -954,17 +1159,28 @@ describe('Sidebar locate toolbar', () => {
     expect(markup.indexOf('data-sidebar-fixed-rail="true"')).toBeLessThan(markup.indexOf('data-sidebar-tree-panel="true"'));
     expect(markup).toContain('data-sidebar-tree-panel="true" style="display:flex');
     expect(markup).not.toContain('data-sidebar-tree-panel="true" aria-hidden="true" style="display:none');
-    expect(markup).toContain('gn-v2-active-connection-header');
-    expect(markup).toContain('gn-v2-explorer-search');
+    expect(markup).toContain('gn-v2-explorer-actions');
+    expect(markup).not.toContain('gn-v2-active-connection-header');
+    expect(markup).not.toContain('gn-v2-active-connection-copy');
+    expect(markup).not.toContain('gn-v2-explorer-search');
     expect(markup).toContain('data-v2-sidebar-search-mode="command"');
-    expect(markup).toContain('gn-v2-explorer-command-trigger');
-    expect(markup).toContain('gn-v2-explorer-filter-action');
-    expect(markup).toContain('重置侧栏筛选');
-    expect(markup).toContain('搜索表、连接、动作... 或问 AI');
-    expect(markup).toContain('gn-v2-search-shortcut');
-    expect(markup).toContain('<kbd>⌘</kbd>');
-    expect(markup).toContain('<kbd>K</kbd>');
+    expect(markup).toContain('data-sidebar-command-search-action="true"');
+    expect(markup).toContain('data-v2-command-search-icon-only="true"');
+    expect(markup).not.toContain('gn-v2-explorer-filter-action');
+    expect(markup).not.toContain('重置侧栏筛选');
+    expect(markup).not.toContain('搜索表、连接、动作... 或问 AI');
+    expect(markup).not.toContain('gn-v2-search-shortcut');
+    expect(markup).not.toContain('<kbd>⌘</kbd>');
+    expect(markup).not.toContain('<kbd>K</kbd>');
     expect(markup).toContain('gn-v2-explorer-filter-tabs');
+    const explorerActionsIndex = markup.indexOf('data-sidebar-explorer-actions="true"');
+    const commandSearchActionIndex = markup.indexOf('data-sidebar-command-search-action="true"');
+    const locateActionIndex = markup.indexOf('data-sidebar-locate-current-tab-action="true"');
+    const explorerFilterTabsIndex = markup.indexOf('class="gn-v2-explorer-filter-tabs"');
+    expect(explorerActionsIndex).toBeGreaterThanOrEqual(0);
+    expect(commandSearchActionIndex).toBeGreaterThan(explorerActionsIndex);
+    expect(locateActionIndex).toBeGreaterThan(commandSearchActionIndex);
+    expect(explorerFilterTabsIndex).toBeGreaterThan(locateActionIndex);
     expect(markup).toContain('全部');
     expect(markup).toContain('视图');
     expect(markup).toContain('函数');
@@ -1027,7 +1243,10 @@ describe('Sidebar locate toolbar', () => {
 
     const markup = renderSidebarMarkup({ uiVersion: 'v2' });
 
-    expect(markup).toContain(t('sidebar.message_queue.search_placeholder'));
+    expect(markup).toContain('data-v2-command-search-icon-only="true"');
+    expect(markup).toContain('data-sidebar-command-search-action="true"');
+    expect(markup).not.toContain('gn-v2-explorer-search');
+    expect(markup).not.toContain(t('sidebar.message_queue.search_placeholder'));
     expect(markup).not.toContain('gn-v2-explorer-filter-tabs');
     expect(markup).not.toContain(`>${t('sidebar.command_search.object_kind.tables')}<`);
     expect(markup).not.toContain(`>${t('sidebar.command_search.object_kind.views')}<`);
@@ -1041,20 +1260,23 @@ describe('Sidebar locate toolbar', () => {
     const markup = renderSidebarMarkup({ uiVersion: 'v2' });
 
     expect(markup).toContain('data-v2-sidebar-search-mode="filter"');
+    expect(markup).toContain('gn-v2-explorer-search');
+    expect(markup).not.toContain('data-sidebar-command-search-action="true"');
     expect(markup).toContain(`placeholder="${t('sidebar.search.placeholder')}"`);
     expect(markup).toContain('value="fs_org"');
     expect(markup).toContain('重置侧栏筛选');
   });
 
-  it('renders the v2 search shortcut from the user shortcut settings', () => {
+  it('keeps the v2 command trigger icon-only when the search shortcut is customized', () => {
     mocks.state.shortcutOptions = cloneShortcutOptions(DEFAULT_SHORTCUT_OPTIONS);
     mocks.state.shortcutOptions.focusSidebarSearch.mac = { combo: 'Meta+F', enabled: true };
 
     const markup = renderSidebarMarkup({ uiVersion: 'v2' });
 
-    expect(markup).toContain('gn-v2-search-shortcut');
-    expect(markup).toContain('<kbd>⌘</kbd>');
-    expect(markup).toContain('<kbd>F</kbd>');
+    expect(markup).toContain('data-v2-command-search-icon-only="true"');
+    expect(markup).not.toContain('gn-v2-search-shortcut');
+    expect(markup).not.toContain('<kbd>⌘</kbd>');
+    expect(markup).not.toContain('<kbd>F</kbd>');
     expect(markup).not.toContain('<kbd>K</kbd>');
   });
 
@@ -1183,10 +1405,15 @@ describe('Sidebar locate toolbar', () => {
     expect(css).toMatch(/body\[data-ui-version="v2"\] \.gn-v2-rail-item,\s*body\[data-ui-version="v2"\] \.gn-v2-rail-tool \{[^}]*width: calc\(36px \* var\(--gn-v2-rail-scale\)\);[^}]*height: calc\(38px \* var\(--gn-v2-rail-scale\)\);[^}]*font-size: calc\(var\(--gn-font-size-sm, 12px\) \* var\(--gn-sidebar-rail-scale, 1\)\);/s);
     expect(css).toMatch(/\.gn-v2-rail-tool \{[^}]*height: calc\(28px \* var\(--gn-v2-rail-scale\)\);/s);
     expect(css).toMatch(/\.gn-v2-rail-tool \{[^}]*width: calc\(28px \* var\(--gn-v2-rail-scale\)\);/s);
-    expect(css).toMatch(/\.gn-v2-active-connection-trigger \{[^}]*height: 34px;[^}]*border: 0;[^}]*background: transparent;/s);
-    expect(css).toMatch(/\.gn-v2-active-connection-tooltip \{[^}]*display: flex;[^}]*flex-direction: column;[^}]*gap: 2px;[^}]*max-width: min\(320px, calc\(100vw - 24px\)\);[^}]*overflow-wrap: anywhere;/s);
+    expect(css).toContain('--gn-v2-explorer-scale: var(--gn-ui-scale, 1);');
+    expect(css).toMatch(/\.gn-v2-explorer-actions \{[^}]*min-height: calc\(46px \* var\(--gn-v2-explorer-scale\)\);/s);
+    expect(css).toMatch(/\.gn-v2-explorer-context-line\.is-connection \{[^}]*font-size: var\(--gn-sidebar-tree-font-size, var\(--gn-font-size-sm, 12px\)\);/s);
+    expect(css).toMatch(/\.gn-v2-explorer-context-line\.is-database,[\s\S]*?\.gn-v2-explorer-context-line\.is-object \{[^}]*font-size: var\(--gn-sidebar-tree-font-size, var\(--gn-font-size-sm, 12px\)\);/s);
+    expect(css).toMatch(/\.gn-v2-explorer-tool\.ant-btn \{[^}]*width: calc\(26px \* var\(--gn-v2-explorer-scale\)\);[^}]*min-width: calc\(26px \* var\(--gn-v2-explorer-scale\)\);[^}]*height: calc\(26px \* var\(--gn-v2-explorer-scale\)\) !important;/s);
+    expect(css).toMatch(/\.gn-v2-explorer-tool\.ant-btn \.anticon \{[^}]*font-size: calc\(14px \* var\(--gn-v2-explorer-scale\)\);/s);
+    expect(css).toMatch(/\.gn-v2-explorer-action-wrap:focus-visible \{[^}]*outline: 2px solid var\(--gn-accent\);/s);
     expect(css).toMatch(/\.gn-v2-object-explorer \{[^}]*container-type: inline-size;[^}]*container-name: gn-v2-object-explorer;/s);
-    expect(css).not.toContain('.gn-v2-active-connection-trigger:hover');
+    expect(css).not.toContain('.gn-v2-active-connection-trigger');
   });
 
   it('keeps query and connection creation actions out of the v2 explorer header', () => {
@@ -1209,7 +1436,7 @@ describe('Sidebar locate toolbar', () => {
     };
 
     const markup = renderSidebarMarkup({ uiVersion: 'v2', onCreateConnection: mocks.noop });
-    expect(markup).toContain('gn-v2-active-connection-actions');
+    expect(markup).toContain('gn-v2-explorer-actions');
     expect(markup).not.toContain('data-gonavi-new-query-action="true"');
     expect(markup).not.toContain('data-gonavi-create-connection-action="true"');
   });
@@ -1226,7 +1453,8 @@ describe('Sidebar locate toolbar', () => {
     const source = readSidebarSource();
     const treeLoaderSource = readSourceFile('./sidebar/useSidebarTreeLoaders.tsx');
     const titleRenderSource = readSourceFile('./sidebar/useSidebarTitleRender.tsx');
-    expect(css).toMatch(/\.gn-v2-tree-status\.is-loading::before \{[^}]*border: 2px solid rgba\(37, 99, 235, 0\.24\);[^}]*animation: gn-v2-tree-status-spin 0\.8s linear infinite;/s);
+    expect(css).toMatch(/\.gn-v2-tree-status\.is-loading::before \{[^}]*border: 2px solid rgba\(37, 99, 235, 0\.58\);[^}]*animation: gn-v2-tree-status-spin 0\.8s linear infinite;/s);
+    expect(css).toMatch(/\.gn-v2-tree-status\.is-loading::before \{[^}]*border-top-color: #2563eb;/s);
     expect(css).toMatch(/@keyframes gn-v2-tree-status-spin \{[^}]*to \{ transform: rotate\(360deg\); \}/s);
   });
 
@@ -1398,17 +1626,15 @@ describe('Sidebar locate toolbar', () => {
     const markup = renderSidebarMarkup({ uiVersion: 'v2' });
 
     expect(markup).toContain('gn-v2-connection-rail');
-    expect(markup).toContain('gn-v2-active-connection-copy');
-    expect(markup).toMatch(/<strong aria-describedby="[^"]+">本地<\/strong>/);
-    expect(markup).toMatch(/<span aria-describedby="[^"]+">app_db<\/span>/);
-    expect(markup).not.toContain('title="本地"');
-    expect(markup).not.toContain('title="app_db"');
+    expect(markup).toContain('gn-v2-explorer-actions');
+    expect(markup).not.toContain('gn-v2-active-connection-header');
+    expect(markup).not.toContain('gn-v2-active-connection-copy');
     expect(markup).not.toContain('gn-v2-live-dot');
     expect(markup).not.toContain('<span>localhost</span>');
     expect(markup).not.toContain('gn-v2-db-icon-label');
   });
 
-  it('shows an empty v2 active host header when no host is selected', () => {
+  it('keeps the v2 explorer actions available when no host is selected', () => {
     setCurrentLanguage('en-US');
 
     mocks.state.connections = [{
@@ -1433,11 +1659,9 @@ describe('Sidebar locate toolbar', () => {
 
     const markup = renderSidebarMarkup({ uiVersion: 'v2' });
 
-    expect(markup).toMatch(new RegExp(`<strong aria-describedby="[^"]+">${t('sidebar.active_connection.no_host_selected')}</strong>`));
-    expect(markup).toMatch(new RegExp(`<span class="is-placeholder" aria-describedby="[^"]+">${t('sidebar.active_connection.no_database_selected')}</span>`));
-    expect(markup).not.toContain(`title="${t('sidebar.active_connection.no_host_selected')}"`);
-    expect(markup).not.toContain(`title="${t('sidebar.active_connection.no_database_selected')}"`);
-    expect(markup).not.toContain('<strong>本地</strong>');
+    expect(markup).toContain('gn-v2-explorer-actions');
+    expect(markup).not.toContain('gn-v2-active-connection-header');
+    expect(markup).not.toContain('gn-v2-active-connection-copy');
   });
 
   it('normalizes rc-tree absolute drop positions back to relative positions', () => {

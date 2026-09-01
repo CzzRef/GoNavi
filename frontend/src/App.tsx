@@ -1,7 +1,7 @@
 ﻿import Modal from './components/common/ResizableDraggableModal';
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useMemo, useCallback, useRef } from 'react';
 import { withAISettingsLeaveGuard, type AISettingsLeaveGuard } from './utils/aiSettingsLeaveGuard';
-import { Layout, Button, ConfigProvider, theme, message, Spin, Slider, Switch, Input, InputNumber, Select, Segmented, Tooltip, Alert } from 'antd';
+import { Layout, Button, ConfigProvider, theme, message, notification, Spin, Slider, Switch, Input, InputNumber, Select, Segmented, Tooltip, Alert } from 'antd';
 import { UploadOutlined, DownloadOutlined, CloudDownloadOutlined, BugOutlined, GlobalOutlined, InfoCircleOutlined, GithubOutlined, SkinOutlined, CheckOutlined, MinusOutlined, BorderOutlined, CloseOutlined, SettingOutlined, LinkOutlined, BgColorsOutlined, AppstoreOutlined, RobotOutlined, FolderOpenOutlined, HddOutlined, SafetyCertificateOutlined, SwitcherOutlined, CodeOutlined, RightOutlined, TableOutlined, MenuOutlined, MenuFoldOutlined, MenuUnfoldOutlined, PoweroffOutlined, TagOutlined, UserOutlined, UpCircleOutlined, MessageOutlined, FileTextOutlined, SyncOutlined, SendOutlined, AuditOutlined } from '@ant-design/icons';
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
@@ -11,6 +11,7 @@ import Sidebar from './components/Sidebar';
 import TitleBarPrimaryActions, {
   resolveTitleBarPrimaryActionShortcut,
 } from './components/TitleBarPrimaryActions';
+import ConnectionGroupManagementModal from './components/sidebar/ConnectionGroupManagementModal';
 import TabManager from './components/TabManager';
 import FloatingWorkbenchWindows from './components/FloatingWorkbenchWindows';
 import FloatingAIChatWindow from './components/FloatingAIChatWindow';
@@ -96,7 +97,11 @@ import {
   type TabDisplayLayout,
   type TabDisplaySettings,
 } from './utils/tabDisplay';
-import { getMacNativeTitlebarPaddingLeft, getMacNativeTitlebarPaddingRight, shouldHandleMacNativeFullscreenShortcut, shouldSuppressMacNativeEscapeExit } from './utils/macWindow';
+import {
+  resolveTitlebarContext,
+  type TitlebarSidebarSnapshot,
+} from './utils/titlebarContext';
+import { getMacNativeTitlebarContentOffset, getMacNativeTitlebarPaddingLeft, getMacNativeTitlebarPaddingRight, shouldHandleMacNativeFullscreenShortcut, shouldSuppressMacNativeEscapeExit } from './utils/macWindow';
 import { shouldEnableMacWindowDiagnostics } from './utils/macWindowDiagnostics';
 import { getConnectionWorkbenchState } from './utils/startupReadiness';
 import {
@@ -280,6 +285,7 @@ import {
 } from '../wailsjs/go/app/App';
 import { getAntdLocale } from './i18n/frameworkLocale';
 import { useI18n } from './i18n/provider';
+import { resolveTitleBarLayout } from './utils/titlebarLayout';
 import './App.css';
 import './v2-theme.css';
 import './styles/v2-theme-workbench.css';
@@ -771,6 +777,7 @@ const SidebarMetadataSortableRow: React.FC<SidebarMetadataSortableRowProps> = ({
 
 function App() {
   const { language, t } = useI18n();
+  const [notificationApi, notificationContextHolder] = notification.useNotification();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isConnectionModalMounted, setIsConnectionModalMounted] = useState(false);
   const [isDriverModalOpen, setIsDriverModalOpen] = useState(false);
@@ -1068,7 +1075,6 @@ function App() {
   const resolvedUiFontFamily = resolveUIFontFamily(appearance.customUIFontFamily);
   const resolvedMonoFontFamily = resolveMonoFontFamily(appearance.customMonoFontFamily);
   const appComponentSize: 'small' | 'middle' | 'large' = effectiveUiScale <= 0.92 ? 'small' : (effectiveUiScale >= 1.12 ? 'large' : 'middle');
-  const titleBarHeight = Math.max(28, Math.round(32 * effectiveUiScale));
   const titleBarButtonWidth = Math.max(40, Math.round(46 * effectiveUiScale));
   const floatingLogButtonHeight = Math.max(30, Math.round(34 * effectiveUiScale));
   const resolvedAppearance = resolveAppearanceValues(appearance);
@@ -1094,6 +1100,7 @@ function App() {
   );
   const linuxCJKFontInstallHint = getLinuxCJKFontInstallHint(runtimePlatform, installedFontFamilies);
   const [isStoreHydrated, setIsStoreHydrated] = useState(() => useStore.persist.hasHydrated());
+  const closeTabsByConnection = useStore(state => state.closeTabsByConnection);
   const savedQueriesBootstrapPromiseRef = useRef<Promise<void> | null>(null);
   const savedQueriesLoadedRef = useRef(false);
   const [hasLoadedSecureConfig, setHasLoadedSecureConfig] = useState(false);
@@ -1111,6 +1118,7 @@ function App() {
   const [securityUpdateProgressStage, setSecurityUpdateProgressStage] = useState(() => t('app.security_update.stage.checking_saved_config'));
   const [securityUpdateRepairSource, setSecurityUpdateRepairSource] = useState<SecurityUpdateRepairSource | null>(null);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isConnectionGroupManagementOpen, setIsConnectionGroupManagementOpen] = useState(false);
   const [activeSettingsCenterGroupKey, setActiveSettingsCenterGroupKey] = useState<SettingsCenterGroupKey>('preferences');
   const [activeSettingsCenterPane, setActiveSettingsCenterPane] = useState<SettingsCenterPaneState | null>(null);
   const activeSettingsCenterPaneRef = useRef<SettingsCenterPaneState | null>(null);
@@ -1133,9 +1141,14 @@ function App() {
   const sidebarWidth = useStore(state => state.sidebarWidth);
   const setSidebarWidth = useStore(state => state.setSidebarWidth);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [collapsedSidebarActionsTarget, setCollapsedSidebarActionsTarget] = useState<HTMLDivElement | null>(null);
   const sidebarCollapsedToggleRef = useRef<HTMLButtonElement>(null);
   const sidebarExplorerToggleRef = useRef<HTMLButtonElement>(null);
   const pendingSidebarToggleFocusRef = useRef<'collapsed' | 'explorer' | null>(null);
+  const shouldDockCollapsedSidebarActionsInTitlebar = isV2Ui && (
+      runtimePlatform === 'darwin'
+      || (runtimePlatform === '' && /mac/i.test(detectNavigatorPlatform()))
+  );
   const handleCollapseSidebarPanel = useCallback(() => {
       pendingSidebarToggleFocusRef.current = 'collapsed';
       setIsSidebarCollapsed(true);
@@ -1150,10 +1163,24 @@ function App() {
   useEffect(() => {
       const target = pendingSidebarToggleFocusRef.current;
       if (!target) return;
+      if (
+          target === 'collapsed'
+          && isSidebarCollapsed
+          && shouldDockCollapsedSidebarActionsInTitlebar
+          && !collapsedSidebarActionsTarget
+      ) return;
       pendingSidebarToggleFocusRef.current = null;
       (target === 'collapsed' ? sidebarCollapsedToggleRef : sidebarExplorerToggleRef).current?.focus();
-  }, [isSidebarCollapsed]);
-  const sidebarCollapsedWidth = isV2Ui ? 38 * effectiveUiScale * effectiveSidebarRailScale : 0;
+  }, [collapsedSidebarActionsTarget, isSidebarCollapsed, shouldDockCollapsedSidebarActionsInTitlebar]);
+  const titleBarLayout = resolveTitleBarLayout(
+      effectiveUiScale,
+      isV2Ui,
+      isSidebarCollapsed && shouldDockCollapsedSidebarActionsInTitlebar,
+  );
+  const titleBarHeight = titleBarLayout.height;
+  const sidebarCollapsedWidth = isV2Ui && !shouldDockCollapsedSidebarActionsInTitlebar
+      ? 38 * effectiveUiScale * effectiveSidebarRailScale
+      : 0;
   const renderedSidebarWidth = isSidebarCollapsed ? sidebarCollapsedWidth : sidebarWidth;
   const aiPanelVisible = useStore(state => state.aiPanelVisible);
   const detachedAIChatWindow = useStore(state => state.detachedAIChatWindow);
@@ -1205,6 +1232,8 @@ function App() {
       () => resolveSecurityUpdateEntryVisibility(securityUpdateStatus),
       [securityUpdateStatus],
   );
+  const isSecurityUpdateBannerVisible = securityUpdateEntryVisibility.showBanner
+      && !isSecurityUpdateBannerDismissed;
 
   const windowCornerRadius = 14;
   useEffect(() => {
@@ -1409,7 +1438,9 @@ function App() {
       }
 
       let cancelled = false;
-      const coordinator = createConnectionSidebarLayoutCoordinator({
+      const notificationKey = 'connection-sidebar-layout-save-state';
+      let coordinator: ConnectionSidebarLayoutCoordinator;
+      coordinator = createConnectionSidebarLayoutCoordinator({
           backend: (window as any).go?.app?.App,
           store: {
               getLayout: () => {
@@ -1417,20 +1448,103 @@ function App() {
                   return {
                       connectionTags: state.connectionTags,
                       sidebarRootOrder: state.sidebarRootOrder,
+                      rootSortMode: state.rootSortMode,
+                      rootConnectionSortMode: state.rootConnectionSortMode,
                   };
               },
               replaceLayout: replaceConnectionSidebarLayout,
               subscribe: (listener) => useStore.subscribe((state, previousState) => {
-                  if (
-                      state.connectionTags !== previousState.connectionTags
-                      || state.sidebarRootOrder !== previousState.sidebarRootOrder
-                  ) {
+                    if (
+                        state.connectionTags !== previousState.connectionTags
+                        || state.sidebarRootOrder !== previousState.sidebarRootOrder
+                        || state.rootSortMode !== previousState.rootSortMode
+                        || state.rootConnectionSortMode !== previousState.rootConnectionSortMode
+                    ) {
                       listener();
                   }
               }),
           },
           onError: (error) => {
               console.warn('Failed to synchronize shared connection sidebar layout', error);
+          },
+          onSaveStateChange: (state) => {
+              if (cancelled) return;
+              if (state.status === 'saving') {
+                  notificationApi.open({
+                      key: notificationKey,
+                      message: t('app.connection_sidebar_layout.saving'),
+                      description: t('app.connection_sidebar_layout.saving_description'),
+                      icon: <SyncOutlined spin />,
+                      duration: 0,
+                      placement: 'bottomRight',
+                  });
+                  return;
+              }
+              if (state.status === 'saved') {
+                  notificationApi.success({
+                      key: notificationKey,
+                      message: t('app.connection_sidebar_layout.saved'),
+                      description: t('app.connection_sidebar_layout.saved_description'),
+                      duration: 2,
+                      placement: 'bottomRight',
+                  });
+                  return;
+              }
+              if (state.status === 'error') {
+                  const detail = state.error instanceof Error
+                      ? state.error.message
+                      : String(state.error);
+                  notificationApi.error({
+                      key: notificationKey,
+                      message: t('app.connection_sidebar_layout.save_failed'),
+                      description: t('app.connection_sidebar_layout.save_failed_description', { detail }),
+                      btn: (
+                          <Button
+                            size="small"
+                            type="primary"
+                            onClick={() => void coordinator.retryPendingSave().catch(() => undefined)}
+                          >
+                            {t('app.connection_sidebar_layout.retry_save')}
+                          </Button>
+                      ),
+                      duration: 0,
+                      placement: 'bottomRight',
+                  });
+                  return;
+              }
+              notificationApi.warning({
+                  key: notificationKey,
+                  message: t('app.connection_sidebar_layout.conflict'),
+                  description: t('app.connection_sidebar_layout.conflict_description'),
+                  btn: (
+                      <div style={{ display: 'flex', gap: 8 }}>
+                          <Button
+                            size="small"
+                            onClick={() => {
+                                coordinator.acceptRemoteLayout();
+                                notificationApi.info({
+                                    key: notificationKey,
+                                    message: t('app.connection_sidebar_layout.remote_applied'),
+                                    description: t('app.connection_sidebar_layout.remote_applied_description'),
+                                    duration: 2,
+                                    placement: 'bottomRight',
+                                });
+                            }}
+                          >
+                            {t('app.connection_sidebar_layout.refresh_remote')}
+                          </Button>
+                          <Button
+                            size="small"
+                            type="primary"
+                            onClick={() => void coordinator.retryPendingSave().catch(() => undefined)}
+                          >
+                            {t('app.connection_sidebar_layout.retry_save')}
+                          </Button>
+                      </div>
+                  ),
+                  duration: 0,
+                  placement: 'bottomRight',
+              });
           },
           refreshIntervalMs: 2_000,
       });
@@ -1464,12 +1578,13 @@ function App() {
           window.removeEventListener('beforeunload', flushConnectionSidebarLayout, true);
           window.removeEventListener('focus', refreshConnectionSidebarLayout);
           document.removeEventListener('visibilitychange', refreshVisibleConnectionSidebarLayout);
+          notificationApi.destroy(notificationKey);
           coordinator.dispose();
           if (connectionSidebarLayoutCoordinatorRef.current === coordinator) {
               connectionSidebarLayoutCoordinatorRef.current = null;
           }
       };
-  }, [hasLoadedSecureConfig, isStoreHydrated, replaceConnectionSidebarLayout]);
+  }, [hasLoadedSecureConfig, isStoreHydrated, notificationApi, replaceConnectionSidebarLayout, t]);
 
   useEffect(() => {
       let cancelled = false;
@@ -2350,17 +2465,58 @@ function App() {
   const addTab = useStore(state => state.addTab);
   const activeContext = useStore(state => state.activeContext);
   const connections = useStore(state => state.connections);
+  const [sidebarTitlebarSnapshot, setSidebarTitlebarSnapshot] = useState<TitlebarSidebarSnapshot>({
+      selection: null,
+      connectionStates: {},
+  });
   const moveConnectionToTag = useStore(state => state.moveConnectionToTag);
   const tabs = useWorkbenchTabs();
   const activeTabId = useStore(state => state.activeTabId);
   const setActiveTab = useStore(state => state.setActiveTab);
   const savedQueries = useStore(state => state.savedQueries);
   const saveQuery = useStore(state => state.saveQuery);
+  const activeWorkbenchTab = useMemo(
+      () => activeTabId ? tabs.find(tab => tab.id === activeTabId) : undefined,
+      [activeTabId, tabs],
+  );
+  const titlebarContext = useMemo(
+      () => resolveTitlebarContext({
+          activeContext,
+          sidebarContext: sidebarTitlebarSnapshot.selection,
+          activeTab: activeWorkbenchTab,
+          connections,
+      }),
+      [activeContext, activeWorkbenchTab, connections, sidebarTitlebarSnapshot.selection],
+  );
+  // Keep primary-action semantics anchored to the active workbench context.
+  // The title-bar summary may intentionally follow a separate Sidebar row.
   const currentPrimaryActionConnection = useMemo(() => {
-      const activeTab = activeTabId ? tabs.find(tab => tab.id === activeTabId) : undefined;
-      const connectionId = String(activeContext?.connectionId || activeTab?.connectionId || '').trim();
+      const connectionId = String(activeContext?.connectionId || activeWorkbenchTab?.connectionId || '').trim();
       return connections.find(connection => connection.id === connectionId) || null;
-  }, [activeContext?.connectionId, activeTabId, connections, tabs]);
+  }, [activeContext?.connectionId, activeWorkbenchTab?.connectionId, connections]);
+  const explorerContextConnectionName = titlebarContext.connectionName
+      || t('sidebar.active_connection.no_host_selected');
+  const explorerContextTooltipText = [
+      titlebarContext.connection ? explorerContextConnectionName : '',
+      titlebarContext.databaseName,
+      titlebarContext.tableName,
+  ].filter(Boolean).join(' · ') || explorerContextConnectionName;
+  const explorerContextTooltip = titlebarContext.connection
+      ? explorerContextTooltipText
+      : t('sidebar.active_connection.no_host_selected');
+  const v2ExplorerContext = useMemo(() => ({
+      active: Boolean(titlebarContext.connection),
+      connectionName: explorerContextConnectionName,
+      databaseName: titlebarContext.databaseName,
+      objectName: titlebarContext.tableName,
+      tooltip: explorerContextTooltip,
+  }), [
+      explorerContextConnectionName,
+      explorerContextTooltip,
+      titlebarContext.connection,
+      titlebarContext.databaseName,
+      titlebarContext.tableName,
+  ]);
   const primaryActionIsMessageQueue = isMessageQueueDataSource(
       currentPrimaryActionConnection?.config,
   );
@@ -4759,7 +4915,11 @@ function App() {
       sidebarCollapsed: isSidebarCollapsed,
   });
 
-  useEffect(() => {
+  // Apply the document theme before the first paint. V2 structural styles are
+  // scoped by data-ui-version; a passive effect leaves one unstyled titlebar
+  // frame where the centered context and its marker collapse into the legacy
+  // flex layout.
+  useLayoutEffect(() => {
     document.body.style.backgroundColor = 'transparent';
     document.body.style.color = darkMode ? '#ffffff' : '#000000';
     document.documentElement.style.colorScheme = darkMode ? 'dark' : 'light';
@@ -6638,6 +6798,18 @@ function App() {
                                       </div>
                                   </>,
                               )}
+                              {renderThemeSettingsSection(
+                                  t('app.theme.table_alias.title'),
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                                      <div className="gonavi-settings-section-hint" style={{ marginTop: 0 }}>
+                                          {t('app.theme.table_alias.description')}
+                                      </div>
+                                      <Switch
+                                          checked={appearance.autoAddTableAlias !== false}
+                                          onChange={(checked) => setAppearance({ autoAddTableAlias: checked })}
+                                      />
+                                  </div>,
+                              )}
                               <section className="gonavi-settings-section" ref={tabDisplaySettingsPanelRef}>
                                   <div className="gonavi-settings-section-title">{t('app.theme.tab_display.title')}</div>
                                   <div className="gonavi-settings-section-hint">{t('app.theme.tab_display.description')}</div>
@@ -7438,6 +7610,18 @@ function App() {
                                       </div>
                                   </div>
                               </div>
+                              <div style={utilityPanelStyle}>
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                                      <div>
+                                          <div style={{ fontWeight: 500 }}>{t('app.theme.table_alias.title')}</div>
+                                          <div style={{ ...utilityMutedTextStyle, marginTop: 4 }}>{t('app.theme.table_alias.description')}</div>
+                                      </div>
+                                      <Switch
+                                          checked={appearance.autoAddTableAlias !== false}
+                                          onChange={(checked) => setAppearance({ autoAddTableAlias: checked })}
+                                      />
+                                  </div>
+                              </div>
                               <div ref={tabDisplaySettingsPanelRef} style={utilityPanelStyle}>
                                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 12 }}>
                                       <div style={{ minWidth: 0 }}>
@@ -8129,12 +8313,20 @@ function App() {
         componentSize={appComponentSize}
         theme={antdTheme}
     >
+        {notificationContextHolder}
         <CustomThemeStyleHost
             contextKey={customThemeStyleContextKey}
             onAntTokensChange={setComputedCustomThemeAntTokens}
         />
         <ToolbarAppearanceStyleHost />
-        <Layout data-gonavi-close-shortcut-scope="workspace" style={{
+        <Layout
+          data-gonavi-close-shortcut-scope="workspace"
+          data-empty-workbench={isV2Ui && tabs.length === 0 ? 'true' : 'false'}
+          data-collapsed-sidebar-actions-docked={
+              isSidebarCollapsed && shouldDockCollapsedSidebarActionsInTitlebar ? 'true' : 'false'
+          }
+          data-security-update-banner-visible={isSecurityUpdateBannerVisible ? 'true' : 'false'}
+          style={{
             height: '100vh',
             overflow: 'hidden',
             display: 'flex',
@@ -8144,7 +8336,9 @@ function App() {
             clipPath: showLinuxResizeHandles ? 'none' : 'inset(0 round var(--gonavi-border-radius))',
             backdropFilter: blurFilter,
             WebkitBackdropFilter: blurFilter,
-        }}>
+            ['--gn-v2-empty-workbench-titlebar-overlap' as any]: `${titleBarLayout.emptyWorkbenchTopOffset}px`,
+          }}
+        >
           <input
             ref={browserConnectionImportInputRef}
             type="file"
@@ -8154,18 +8348,27 @@ function App() {
           />
           {/* Custom Title Bar */}
           <div
+            className={[
+              isV2Ui ? 'gn-v2-titlebar' : 'gonavi-titlebar',
+              isV2Ui && useNativeMacWindowControls ? 'gn-v2-titlebar-native-mac' : '',
+              isSidebarCollapsed && shouldDockCollapsedSidebarActionsInTitlebar ? 'gn-v2-titlebar-collapsed-docked' : '',
+            ].filter(Boolean).join(' ')}
             onDoubleClick={handleTitleBarDoubleClick}
             style={{
                 height: titleBarHeight,
                 flexShrink: 0,
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'space-between',
+                justifyContent: isV2Ui ? 'flex-start' : 'space-between',
+                // Keep the V2 titlebar on the same surface as the immediately adjacent workbench.
                 background: isV2Ui ? 'var(--gn-bg-panel-2)' : bgMain,
                 borderBottom: 'none',
                 userSelect: 'none',
                 WebkitAppRegion: isWebRuntime ? 'no-drag' : 'drag',
                 '--wails-draggable': isWebRuntime ? 'no-drag' : 'drag',
+                '--gn-titlebar-action-height': `${titleBarLayout.actionHeight}px`,
+                '--gn-titlebar-divider-height': `${titleBarLayout.dividerHeight}px`,
+                '--gn-titlebar-native-content-offset': `${getMacNativeTitlebarContentOffset(titleBarHeight, isV2Ui && useNativeMacWindowControls)}px`,
                 paddingLeft: getMacNativeTitlebarPaddingLeft(effectiveUiScale, useNativeMacWindowControls),
                 paddingRight: getMacNativeTitlebarPaddingRight(effectiveUiScale, useNativeMacWindowControls),
                 fontSize: tokenFontSize
@@ -8207,54 +8410,69 @@ function App() {
                     newConnectionShortcut={titleBarNewConnectionShortcut}
                     onNewQuery={handleNewQuery}
                     onNewConnection={handleCreateConnection}
+                    connectionGroupLabel={t('connection.sidebar.management.title')}
+                    onConnectionGroupManagement={() => setIsConnectionGroupManagementOpen(true)}
                   />
                   {isV2Ui && <div id="gonavi-titlebar-quick-actions" className="gonavi-titlebar-quick-actions-slot" />}
               </div>
-              {isWebRuntime ? (
+              {isSidebarCollapsed && shouldDockCollapsedSidebarActionsInTitlebar && (
                   <div
-                    onDoubleClick={(e) => e.stopPropagation()}
-                    style={{ display: 'flex', alignItems: 'center', gap: 8, WebkitAppRegion: 'no-drag', '--wails-draggable': 'no-drag' } as any}
-                  >
-                      <Tooltip title="退出当前 Web 会话">
+                    ref={setCollapsedSidebarActionsTarget}
+                    className="gn-v2-collapsed-sidebar-actions"
+                    data-collapsed-sidebar-actions="true"
+                    data-no-titlebar-toggle="true"
+                    role="toolbar"
+                    aria-label={t('sidebar.rail.system_actions')}
+                    onDoubleClick={(event) => event.stopPropagation()}
+                  />
+              )}
+              {/* Collapsed sidebar titlebar actions end */}
+              <div className={isV2Ui ? 'gn-v2-titlebar-right' : undefined}>
+                  {isWebRuntime ? (
+                      <div
+                        onDoubleClick={(e) => e.stopPropagation()}
+                        style={{ display: 'flex', alignItems: 'center', gap: 8, WebkitAppRegion: 'no-drag', '--wails-draggable': 'no-drag' } as any}
+                      >
+                          <Tooltip title="退出当前 Web 会话">
+                              <Button
+                                type="text"
+                                icon={<PoweroffOutlined />}
+                                className="titlebar-web-logout-btn"
+                                style={{ height: '100%', borderRadius: 8, width: titleBarButtonWidth }}
+                                onClick={() => { void handleWebLogout(); }}
+                              />
+                          </Tooltip>
+                      </div>
+                  ) : useNativeMacWindowControls ? null : (
+                      <div
+                        className="titlebar-window-controls"
+                        data-no-titlebar-toggle="true"
+                        onDoubleClick={(e) => e.stopPropagation()}
+                        style={{ display: 'flex', height: '100%', WebkitAppRegion: 'no-drag', '--wails-draggable': 'no-drag' } as any}
+                      >
                           <Button
                             type="text"
-                            icon={<PoweroffOutlined />}
-                            style={{ height: '100%', borderRadius: 8, width: titleBarButtonWidth }}
-                            onClick={() => { void handleWebLogout(); }}
+                            icon={<MinusOutlined />}
+                            style={{ height: '100%', borderRadius: 0, width: titleBarButtonWidth }}
+                            onClick={WindowMinimise}
                           />
-                      </Tooltip>
-                  </div>
-              ) : useNativeMacWindowControls ? (
-                  <div style={{ minWidth: Math.max(40, Math.round(48 * effectiveUiScale)) }} />
-              ) : (
-                  <div
-                    className="titlebar-window-controls"
-                    data-no-titlebar-toggle="true"
-                    onDoubleClick={(e) => e.stopPropagation()}
-                    style={{ display: 'flex', height: '100%', WebkitAppRegion: 'no-drag', '--wails-draggable': 'no-drag' } as any}
-                  >
-                      <Button
-                        type="text"
-                        icon={<MinusOutlined />}
-                        style={{ height: '100%', borderRadius: 0, width: titleBarButtonWidth }}
-                        onClick={WindowMinimise}
-                      />
-                      <Button
-                        type="text"
-                        icon={titleBarToggleIconKey === 'restore' ? <SwitcherOutlined /> : <BorderOutlined />}
-                        style={{ height: '100%', borderRadius: 0, width: titleBarButtonWidth }}
-                        onClick={() => { void handleTitleBarWindowToggle(); }}
-                      />
-                      <Button
-                        type="text"
-                        icon={<CloseOutlined />}
-                        danger
-                        className="titlebar-close-btn"
-                        style={{ height: '100%', borderRadius: 0, width: titleBarButtonWidth }}
-                        onClick={() => { void handleApplicationQuitRequest(); }}
-                      />
-                  </div>
-              )}
+                          <Button
+                            type="text"
+                            icon={titleBarToggleIconKey === 'restore' ? <SwitcherOutlined /> : <BorderOutlined />}
+                            style={{ height: '100%', borderRadius: 0, width: titleBarButtonWidth }}
+                            onClick={() => { void handleTitleBarWindowToggle(); }}
+                          />
+                          <Button
+                            type="text"
+                            icon={<CloseOutlined />}
+                            danger
+                            className="titlebar-close-btn"
+                            style={{ height: '100%', borderRadius: 0, width: titleBarButtonWidth }}
+                            onClick={() => { void handleApplicationQuitRequest(); }}
+                          />
+                      </div>
+                  )}
+              </div>
           </div>
 
           {showLinuxCJKFontBanner && (
@@ -8279,6 +8497,7 @@ function App() {
             trigger={null}
             data-sidebar-panel="true"
             data-sidebar-collapsed={isSidebarCollapsed}
+            data-sidebar-actions-placement={shouldDockCollapsedSidebarActionsInTitlebar ? 'titlebar' : 'fixed-rail'}
             className={isV2Ui ? 'gn-v2-app-sider' : undefined}
             style={{
                 borderRight: isV2Ui ? 'none' : '1px solid rgba(128,128,128,0.2)',
@@ -8312,7 +8531,7 @@ function App() {
                 </>
                 )}
 
-                <div style={{ flex: 1, overflow: 'hidden', paddingBottom: isV2Ui ? 0 : 58, paddingRight: isSidebarCollapsed ? 0 : sidebarResizeHandleWidth, position: 'relative' }}>
+                <div style={{ flex: 1, overflow: 'hidden', paddingBottom: isV2Ui ? 0 : 58, paddingRight: isV2Ui || isSidebarCollapsed ? 0 : sidebarResizeHandleWidth, position: 'relative' }}>
                     <div style={{ height: '100%', opacity: connectionWorkbenchState.ready ? 1 : 0.72, pointerEvents: connectionWorkbenchState.ready ? 'auto' : 'none' }}>
                         <Sidebar
                             onCreateConnection={handleCreateConnection}
@@ -8325,9 +8544,12 @@ function App() {
                             onToggleAI={toggleAIPanel}
                             onToggleLogPanel={handleToggleLogPanel}
                             uiVersion={appearance.uiVersion}
+                            v2ExplorerContext={v2ExplorerContext}
+                            collapsedSidebarActionsTarget={collapsedSidebarActionsTarget}
                             onFocusCommandSearch={handleFocusSidebarSearch}
                             onCollapseSidebar={isV2Ui ? handleCollapseSidebarPanel : undefined}
                             onExpandSidebar={isV2Ui ? handleExpandSidebarPanel : undefined}
+                            onTitlebarSnapshotChange={setSidebarTitlebarSnapshot}
                             collapseSidebarLabel={isV2Ui ? sidebarPanelCollapseLabel : undefined}
                             collapseSidebarButtonRef={sidebarExplorerToggleRef}
                             expandSidebarLabel={isV2Ui ? sidebarPanelExpandLabel : undefined}
@@ -8436,7 +8658,7 @@ function App() {
            <Content
              style={{ background: isV2Ui ? 'var(--gn-bg-panel-2)' : bgContent, overflow: 'hidden', display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}
            >
-             {securityUpdateEntryVisibility.showBanner && !isSecurityUpdateBannerDismissed && (
+             {isSecurityUpdateBannerVisible && (
                 <SecurityUpdateBanner
                   status={securityUpdateStatus}
                   darkMode={darkMode}
@@ -8629,6 +8851,7 @@ function App() {
             open={isModalOpen}
             onClose={handleCloseModal}
             initialValues={editingConnection}
+            modalZIndex={isConnectionGroupManagementOpen ? APP_NESTED_MODAL_Z_INDEX : undefined}
             onOpenDriverManager={handleOpenDriverManagerFromConnection}
             onSaved={handleConnectionSaved}
             onOpenConnectionHealth={(connection) => {
@@ -8641,6 +8864,7 @@ function App() {
             open={isConnectionHealthModalOpen}
             targetConnectionIds={connectionHealthTargetIds}
             onClose={() => setIsConnectionHealthModalOpen(false)}
+            zIndex={isConnectionGroupManagementOpen ? APP_NESTED_MODAL_Z_INDEX : APP_FOREGROUND_MODAL_Z_INDEX}
           />
           {isSettingsModalOpen && (() => {
             const toolCenterGroups: SettingsCenterNavigationGroup[] = [
@@ -9744,6 +9968,18 @@ function App() {
                   <div style={{ ...linuxResizeHandleStyleBase, bottom: 0, right: 0, width: 14, height: 14, cursor: 'nwse-resize' }} />
               </>
           )}
+
+          <ConnectionGroupManagementModal
+            open={isConnectionGroupManagementOpen}
+            onClose={() => setIsConnectionGroupManagementOpen(false)}
+            onOpenTagForm={(parentTagId) => window.dispatchEvent(new CustomEvent('gonavi:open-connection-tag-form', { detail: { parentTagId } }))}
+            onCreateConnectionInGroup={handleCreateConnectionInGroup}
+            onEditConnection={handleEditConnection}
+            onCloseTabsByConnection={closeTabsByConnection}
+            onConnectionGroupDeleted={async () => {
+              await connectionSidebarLayoutCoordinatorRef.current?.refresh().catch(() => undefined);
+            }}
+          />
 
           {/* Ghost Resize Line for Log Panel */}
           <div

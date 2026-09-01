@@ -13,6 +13,7 @@ import {
     isQueryEditorTableAliasCompletionContext,
 } from './QueryEditorHelpers';
 import { isPostgresSchemaDialect } from '../../utils/connectionDriverType';
+import { appendTableAlias, resolveTableAliasSyntax } from '../../utils/sqlDialect';
 
 export type QueryEditorAiApplyMode = 'insert' | 'replaceSelection' | 'replaceAll';
 
@@ -44,6 +45,7 @@ export interface QueryEditorAiContext {
     host?: string;
     port?: string | number;
     sourceType?: string;
+    sqlDialect?: string;
     currentDb?: string;
     visibleDbs?: string[];
     tables?: CompletionTableMeta[];
@@ -360,10 +362,12 @@ export const resolveQueryEditorInlineLocalCompletion = ({
     aiContext,
     editorSnapshot,
     deferEmptySchemaCompletion = false,
+    autoAddTableAlias = true,
 }: {
     aiContext: QueryEditorAiContext;
     editorSnapshot: QueryEditorAiEditorSnapshot;
     deferEmptySchemaCompletion?: boolean;
+    autoAddTableAlias?: boolean;
 }): { handled: boolean; insertText: string } => {
     if (!shouldRequestQueryEditorInlineCompletion(editorSnapshot)) {
         return {
@@ -372,11 +376,23 @@ export const resolveQueryEditorInlineLocalCompletion = ({
         };
     }
 
-    const tableAliasInsertText = resolveDeterministicInlineTableAliasInsertText(editorSnapshot);
+    const isTableAliasContext = isQueryEditorInlineTableAliasPending(editorSnapshot);
+    const tableAliasInsertText = autoAddTableAlias
+        ? resolveDeterministicInlineTableAliasInsertText(editorSnapshot, aiContext.sqlDialect || aiContext.sourceType)
+        : '';
     if (tableAliasInsertText) {
         return {
             handled: true,
             insertText: tableAliasInsertText,
+        };
+    }
+    if (isTableAliasContext && (
+        !autoAddTableAlias
+        || resolveTableAliasSyntax(aiContext.sqlDialect || aiContext.sourceType || '') === 'none'
+    )) {
+        return {
+            handled: true,
+            insertText: '',
         };
     }
 
@@ -418,12 +434,18 @@ export const requestQueryEditorInlineCompletion = async ({
     service,
     aiContext,
     editorSnapshot,
+    autoAddTableAlias = true,
 }: {
     service: QueryEditorAiService | undefined;
     aiContext: QueryEditorAiContext;
     editorSnapshot: QueryEditorAiEditorSnapshot;
+    autoAddTableAlias?: boolean;
 }): Promise<string> => {
-    const localCompletion = resolveQueryEditorInlineLocalCompletion({ aiContext, editorSnapshot });
+    const localCompletion = resolveQueryEditorInlineLocalCompletion({
+        aiContext,
+        editorSnapshot,
+        autoAddTableAlias,
+    });
     if (localCompletion.handled) {
         return localCompletion.insertText;
     }
@@ -1483,6 +1505,7 @@ const resolveDeterministicInlineTableInsertText = (
 
 const resolveDeterministicInlineTableAliasInsertText = (
     editorSnapshot: QueryEditorAiEditorSnapshot,
+    dialect?: string,
 ): string => {
     const statementPrefix = getCurrentStatementPrefix(editorSnapshot.prefix);
     if (!/\s$/.test(statementPrefix) || !isQueryEditorTableAliasCompletionContext(statementPrefix)) {
@@ -1493,7 +1516,20 @@ const resolveDeterministicInlineTableAliasInsertText = (
     if (!currentReference || currentReference.alias) {
         return '';
     }
-    return buildQueryEditorTableSourceAlias(currentReference.tableIdent, statementPrefix);
+    const alias = buildQueryEditorTableSourceAlias(currentReference.tableIdent, statementPrefix);
+    return appendTableAlias('', alias, dialect || '');
+};
+
+export const isQueryEditorInlineTableAliasPending = (
+    editorSnapshot: QueryEditorAiEditorSnapshot,
+): boolean => {
+    const statementPrefix = getCurrentStatementPrefix(editorSnapshot.prefix);
+    if (!/\s$/.test(statementPrefix) || !isQueryEditorTableAliasCompletionContext(statementPrefix)) {
+        return false;
+    }
+    const references = collectQueryEditorTableReferences(statementPrefix);
+    const currentReference = references[references.length - 1];
+    return Boolean(currentReference && !currentReference.alias);
 };
 
 const resolveDeterministicInlineColumnInsertText = (
