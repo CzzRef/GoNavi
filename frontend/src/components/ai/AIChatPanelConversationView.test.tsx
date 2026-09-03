@@ -78,6 +78,7 @@ describe('AIChatPanelConversationView', () => {
         onScrollMessages={() => {}}
         onQuickAction={() => {}}
         onSelectSession={() => {}}
+        onArchiveSession={() => {}}
         onEditMessage={() => {}}
         onRetryMessage={() => {}}
         onDeleteMessage={() => {}}
@@ -89,10 +90,12 @@ describe('AIChatPanelConversationView', () => {
     expect(markup).toContain('gn-v2-ai-history-card is-active');
     expect(markup).toContain('当前会话');
     expect(markup).toContain('旧会话');
+    expect(markup).toContain('gn-v2-ai-history-delete');
+    expect(markup).toContain('aria-label="删除"');
     expect(markup).toContain('down');
   });
 
-  it('hides Retry when retrying would truncate a completed tool round', () => {
+  it('keeps Retry after a completed tool round because retry branches the transcript', () => {
     const markup = renderWithI18n(
       <AIChatPanelConversationView
         mode="chat"
@@ -142,7 +145,7 @@ describe('AIChatPanelConversationView', () => {
       />,
     );
 
-    expect(markup).not.toContain('anticon-reload');
+    expect(markup).toContain('anticon-reload');
   });
 
   it('keeps Retry for a settled plain-text assistant turn without later tools', () => {

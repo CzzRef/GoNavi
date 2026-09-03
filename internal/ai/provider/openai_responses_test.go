@@ -21,6 +21,47 @@ func (fn responsesRoundTripFunc) RoundTrip(req *http.Request) (*http.Response, e
 	return fn(req)
 }
 
+func TestOpenAIResponsesProviderGLM53UsesResponsesCompatibleEffortLevels(t *testing.T) {
+	var received map[string]any
+	transport := responsesRoundTripFunc(func(r *http.Request) (*http.Response, error) {
+		if err := json.NewDecoder(r.Body).Decode(&received); err != nil {
+			return nil, err
+		}
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Body:       io.NopCloser(strings.NewReader(`{"id":"glm","status":"completed","output":[{"type":"message","content":[{"type":"output_text","text":"ok"}]}]}`)),
+			Header:     http.Header{"Content-Type": []string{"application/json"}},
+			Request:    r,
+		}, nil
+	})
+	providerInstance, err := NewOpenAIResponsesProvider(ai.ProviderConfig{
+		Type: "openai", APIFormat: "openai-responses", APIKey: "sk-test",
+		BaseURL: "https://api.example.com/v1", Model: "z-ai/glm-5.3-free", ThinkingIntensity: "medium",
+	})
+	if err != nil {
+		t.Fatalf("create provider: %v", err)
+	}
+	provider := providerInstance.(*OpenAIResponsesProvider)
+	provider.client = &http.Client{Transport: transport}
+	if _, err := provider.Chat(context.Background(), ai.ChatRequest{Messages: []ai.Message{{Role: "user", Content: "ping"}}}); err != nil {
+		t.Fatalf("chat: %v", err)
+	}
+	reasoning, _ := received["reasoning"].(map[string]any)
+	if reasoning["effort"] != "medium" {
+		t.Fatalf("GLM-5.3 medium effort = %#v, want medium", reasoning["effort"])
+	}
+
+	provider.config.ThinkingIntensity = "max"
+	received = nil
+	if _, err := provider.Chat(context.Background(), ai.ChatRequest{Messages: []ai.Message{{Role: "user", Content: "ping"}}}); err != nil {
+		t.Fatalf("chat max: %v", err)
+	}
+	reasoning, _ = received["reasoning"].(map[string]any)
+	if reasoning["effort"] != "xhigh" {
+		t.Fatalf("GLM-5.3 max effort = %#v, want xhigh", reasoning["effort"])
+	}
+}
+
 func TestOpenAIResponsesProviderChatUsesResponsesRequestAndParsesOutputItems(t *testing.T) {
 	var received map[string]any
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -697,6 +738,125 @@ func TestOpenAIResponsesProviderSessionReplaysRawReasoningAndToolItems(t *testin
 	}
 }
 
+func TestOpenAIResponsesProviderCompatibleSessionCanonicalizesFunctionCalls(t *testing.T) {
+	requestCount := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestCount++
+		defer r.Body.Close()
+		var payload map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			t.Fatalf("decode request: %v", err)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		if requestCount == 1 {
+			_, _ = w.Write([]byte(`{
+				"id":"resp_tool",
+				"status":"completed",
+				"output":[
+					{"id":"fc_provider_only","type":"function_call","status":"completed","call_id":"call_1","name":"get_columns","arguments":"{\"table\":\"orders\"}"}
+				]
+			}`))
+			return
+		}
+
+		input, ok := payload["input"].([]any)
+		if !ok {
+			t.Fatalf("expected input array, got %#v", payload["input"])
+		}
+		var functionCall map[string]any
+		var functionCallOutput map[string]any
+		for _, rawItem := range input {
+			item, ok := rawItem.(map[string]any)
+			if !ok {
+				continue
+			}
+			switch item["type"] {
+			case "function_call":
+				functionCall = item
+			case "function_call_output":
+				functionCallOutput = item
+			}
+		}
+		if functionCall == nil || functionCall["call_id"] != "call_1" || functionCall["name"] != "get_columns" {
+			t.Fatalf("expected canonical function call, got %#v", functionCall)
+		}
+		if _, exists := functionCall["id"]; exists {
+			t.Fatalf("compatibility replay must not send response-only function-call id: %#v", functionCall)
+		}
+		if _, exists := functionCall["status"]; exists {
+			t.Fatalf("compatibility replay must not send response-only function-call status: %#v", functionCall)
+		}
+		if functionCallOutput == nil || functionCallOutput["call_id"] != "call_1" {
+			t.Fatalf("expected matching function call output, got %#v", functionCallOutput)
+		}
+		_, _ = w.Write([]byte(`{
+			"id":"resp_final",
+			"status":"completed",
+			"output":[{"type":"message","role":"assistant","content":[{"type":"output_text","text":"done"}]}]
+		}`))
+	}))
+	defer server.Close()
+
+	providerInstance, err := NewOpenAIResponsesProvider(ai.ProviderConfig{
+		Type: "openai", APIFormat: "openai-responses", APIKey: "sk-test", BaseURL: server.URL + "/v1", Model: "z-ai/glm-5.3-free",
+	})
+	if err != nil {
+		t.Fatalf("create provider: %v", err)
+	}
+	sessionProvider, ok := providerInstance.(SessionChatProvider)
+	if !ok {
+		t.Fatalf("expected SessionChatProvider, got %T", providerInstance)
+	}
+
+	_, state, err := sessionProvider.ChatWithState(context.Background(), nil, ai.ChatRequest{
+		Messages: []ai.Message{{Role: "user", Content: "Inspect orders"}},
+	})
+	if err != nil {
+		t.Fatalf("first response: %v", err)
+	}
+	decoded, ok := decodeOpenAIResponsesSessionState(state)
+	if !ok {
+		t.Fatalf("expected valid session state, got %s", state)
+	}
+	foundFunctionCall := false
+	for _, rawItem := range decoded.Input {
+		var item map[string]any
+		if err := json.Unmarshal(rawItem, &item); err != nil || item["type"] != "function_call" {
+			continue
+		}
+		foundFunctionCall = true
+		if _, exists := item["id"]; exists {
+			t.Fatalf("new session state must not retain response-only function-call id: %#v", item)
+		}
+		if _, exists := item["status"]; exists {
+			t.Fatalf("new session state must not retain response-only function-call status: %#v", item)
+		}
+	}
+	if !foundFunctionCall {
+		t.Fatal("expected function call in new session state")
+	}
+
+	// Existing sessions have already persisted the response-shaped item. Ensure
+	// they are canonicalized while being replayed, rather than requiring users
+	// to discard their active conversation after upgrading.
+	legacyState, err := json.Marshal(openAIResponsesSessionState{Input: []json.RawMessage{
+		json.RawMessage(`{"id":"fc_provider_only","type":"function_call","status":"completed","call_id":"call_1","name":"get_columns","arguments":"{\"table\":\"orders\"}"}`),
+	}})
+	if err != nil {
+		t.Fatalf("marshal legacy state: %v", err)
+	}
+	response, _, err := sessionProvider.ChatWithState(context.Background(), legacyState, ai.ChatRequest{
+		Messages: []ai.Message{{Role: "tool", ToolCallID: "call_1", Content: `{"columns":["id"]}`}},
+	})
+	if err != nil {
+		t.Fatalf("second response: %v", err)
+	}
+	if response.Content != "done" || requestCount != 2 {
+		t.Fatalf("unexpected response/request count: response=%#v requests=%d", response, requestCount)
+	}
+}
+
 func TestOpenAIResponsesProviderStreamStateKeepsCompletedRawOutput(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/event-stream")
@@ -787,6 +947,26 @@ func TestOpenAIResponsesProviderChatReportsAPIAndEmptyOutputErrors(t *testing.T)
 			body: `{"id":"resp_incomplete","status":"incomplete","incomplete_details":{"reason":"max_output_tokens"},"output":[{"type":"message","role":"assistant","content":[{"type":"output_text","text":"partial"}]}]}`,
 			want: "max_output_tokens",
 		},
+		{
+			name: "failed_output_with_code_only",
+			body: `{"id":"resp_failed","status":"failed","error":{"code":"provider_overloaded"},"output":[{"type":"message","role":"assistant","content":[{"type":"output_text","text":"must not be accepted"}]}]}`,
+			want: "provider_overloaded",
+		},
+		{
+			name: "completed_output_with_code_only_error",
+			body: `{"id":"resp_failed","status":"completed","error":{"code":"provider_overloaded"},"output":[{"type":"message","role":"assistant","content":[{"type":"output_text","text":"must not be accepted"}]}]}`,
+			want: "provider_overloaded",
+		},
+		{
+			name: "cancelled_output",
+			body: `{"id":"resp_cancelled","status":"cancelled","error":{"code":"user_cancelled"},"output":[{"type":"message","role":"assistant","content":[{"type":"output_text","text":"must not be accepted"}]}]}`,
+			want: "user_cancelled",
+		},
+		{
+			name: "unexpected_terminal_status",
+			body: `{"id":"resp_in_progress","status":"in_progress","output":[{"type":"message","role":"assistant","content":[{"type":"output_text","text":"must not be accepted"}]}]}`,
+			want: "in_progress",
+		},
 	}
 
 	for _, tt := range tests {
@@ -809,6 +989,88 @@ func TestOpenAIResponsesProviderChatReportsAPIAndEmptyOutputErrors(t *testing.T)
 			})
 			if err == nil || !strings.Contains(strings.ToLower(err.Error()), strings.ToLower(tt.want)) {
 				t.Fatalf("expected error containing %q, got %v", tt.want, err)
+			}
+		})
+	}
+}
+
+func TestOpenAIResponsesProviderChatStreamRejectsInvalidTerminalEvent(t *testing.T) {
+	tests := []struct {
+		name string
+		body string
+		want string
+	}{
+		{
+			name: "failed",
+			body: `{"type":"response.completed","response":{"id":"resp_failed","status":"failed","error":{"code":"provider_overloaded"},"output":[{"type":"message","role":"assistant","content":[{"type":"output_text","text":"must not be accepted"}]}]}}`,
+			want: "provider_overloaded",
+		},
+		{
+			name: "incomplete",
+			body: `{"type":"response.completed","response":{"id":"resp_incomplete","status":"incomplete","incomplete_details":{"reason":"max_output_tokens"},"output":[{"type":"message","role":"assistant","content":[{"type":"output_text","text":"partial"}]}]}}`,
+			want: "max_output_tokens",
+		},
+		{
+			name: "cancelled",
+			body: `{"type":"response.completed","response":{"id":"resp_cancelled","status":"cancelled","error":{"code":"user_cancelled"},"output":[{"type":"message","role":"assistant","content":[{"type":"output_text","text":"must not be accepted"}]}]}}`,
+			want: "user_cancelled",
+		},
+		{
+			name: "canceled",
+			body: `{"type":"response.completed","response":{"id":"resp_canceled","status":"canceled","error":{"code":"user_canceled"},"output":[{"type":"message","role":"assistant","content":[{"type":"output_text","text":"must not be accepted"}]}]}}`,
+			want: "user_canceled",
+		},
+		{
+			name: "unexpected_terminal_status",
+			body: `{"type":"response.completed","response":{"id":"resp_in_progress","status":"in_progress","output":[{"type":"message","role":"assistant","content":[{"type":"output_text","text":"must not be accepted"}]}]}}`,
+			want: "in_progress",
+		},
+		{
+			name: "completed_with_top_level_message",
+			body: `{"type":"response.completed","message":"upstream response failed","response":{"id":"resp_completed","status":"completed","output":[{"type":"message","role":"assistant","content":[{"type":"output_text","text":"must not be accepted"}]}]}}`,
+			want: "upstream response failed",
+		},
+		{
+			name: "completed_with_top_level_code",
+			body: `{"type":"response.completed","code":"provider_overloaded","response":{"id":"resp_completed","status":"completed","output":[{"type":"message","role":"assistant","content":[{"type":"output_text","text":"must not be accepted"}]}]}}`,
+			want: "provider_overloaded",
+		},
+		{
+			name: "completed_with_top_level_error",
+			body: `{"type":"response.completed","error":{"message":"invalid tool output"},"response":{"id":"resp_completed","status":"completed","output":[{"type":"message","role":"assistant","content":[{"type":"output_text","text":"must not be accepted"}]}]}}`,
+			want: "invalid tool output",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set("Content-Type", "text/event-stream")
+				_, _ = w.Write([]byte("data: " + tt.body + "\n\n"))
+			}))
+			defer server.Close()
+
+			providerInstance, err := NewOpenAIResponsesProvider(ai.ProviderConfig{
+				Type: "custom", APIFormat: "openai-responses", APIKey: "sk-test", BaseURL: server.URL + "/v1", Model: "gpt-test",
+			})
+			if err != nil {
+				t.Fatalf("create provider: %v", err)
+			}
+
+			oldState := json.RawMessage(`{"input":[{"type":"message","role":"user","content":"previous"}]}`)
+			done := false
+			nextState, err := providerInstance.(*OpenAIResponsesProvider).ChatStreamWithState(
+				context.Background(), oldState, ai.ChatRequest{Messages: []ai.Message{{Role: "user", Content: "ping"}}},
+				func(chunk ai.StreamChunk) { done = done || chunk.Done },
+			)
+			if err == nil || !strings.Contains(strings.ToLower(err.Error()), strings.ToLower(tt.want)) {
+				t.Fatalf("expected stream error containing %q, got %v", tt.want, err)
+			}
+			if done {
+				t.Fatal("non-completed terminal status emitted Done")
+			}
+			if string(nextState) != string(oldState) {
+				t.Fatalf("terminal failure advanced provider state: old=%s next=%s", oldState, nextState)
 			}
 		})
 	}

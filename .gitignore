@@ -42,3 +42,4 @@ docs
 docs/*
 !docs/download-cdn-operations.md
 .tmp_superpowers_edit
+.gonavi-dev-signing-identity

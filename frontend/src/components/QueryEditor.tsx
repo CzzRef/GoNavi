@@ -134,6 +134,7 @@ import {
     getColumnDefinitionName,
     getColumnDefinitionType,
 } from '../utils/columnDefinition';
+import { installQueryEditorSuggestWidgetWidth } from './queryEditor/queryEditorSuggestionLayout';
 import QueryEditorResultsPanel, {
     QUERY_EDITOR_SQL_LOG_TAB_KEY,
     resolveEffectiveActiveResultKey,
@@ -213,6 +214,7 @@ import {
     collectQueryEditorObjectDecorationCandidates,
     collectQueryEditorReferencedDatabaseNames,
     collectQueryEditorTableReferences,
+    dispatchQueryEditorSidebarLocate,
     findCompletionTablesByDatabase,
     getCaseInsensitiveValue,
     getCompletionTableSchemaCounts,
@@ -295,6 +297,8 @@ export {
 
 const buildQueryEditorMonacoActionLabel = (key: string): string =>
     `GoNavi: ${translate(key)}`;
+
+type QueryEditorRunScope = 'default' | 'selection' | 'all';
 
 const QUERY_EDITOR_NATIVE_SELECT_CURRENT_LINE_EVENT = 'gonavi:native-select-current-line';
 const QUERY_EDITOR_MAC_FIND_WITH_SELECTION_COMBO = 'Meta+E';
@@ -1901,10 +1905,11 @@ const QueryEditor: React.FC<{ tab: TabData; isActive?: boolean }> = ({ tab, isAc
   const editorShellRef = useRef<HTMLDivElement | null>(null);
   const editorRef = useRef<any>(null);
   const monacoRef = useRef<any>(null);
-  const handleRunRef = useRef<(() => Promise<void>) | null>(null);
+  const handleRunRef = useRef<((scope?: QueryEditorRunScope) => Promise<void>) | null>(null);
   const pendingRunAfterSchemaLoadRef = useRef(false);
   const deferredContextRunSeqRef = useRef(0);
   const runQueryActionRef = useRef<any>(null);
+  const sqlExecutionContextMenuActionDisposablesRef = useRef<any[]>([]);
   const selectCurrentStatementActionRef = useRef<any>(null);
   const macFindWithSelectionGuardActionRef = useRef<any>(null);
   const duplicateCurrentLineActionRef = useRef<any>(null);
@@ -2302,6 +2307,53 @@ const QueryEditor: React.FC<{ tab: TabData; isActive?: boolean }> = ({ tab, isAc
           run: handleOpenSqlSnippetPicker,
       });
   }, [handleOpenSqlSnippetPicker, isElasticsearchMode]);
+
+  const disposeSqlExecutionContextMenuActions = useCallback(() => {
+      sqlExecutionContextMenuActionDisposablesRef.current.forEach((disposable) => disposable?.dispose?.());
+      sqlExecutionContextMenuActionDisposablesRef.current = [];
+  }, []);
+
+  const registerSqlExecutionContextMenuActions = useCallback((editor: any) => {
+      disposeSqlExecutionContextMenuActions();
+      if (!editor || isElasticsearchMode) {
+          return;
+      }
+
+      const actions: Array<{
+          id: string;
+          label: string;
+          scope: Exclude<QueryEditorRunScope, 'default'>;
+          contextMenuOrder: number;
+          precondition?: string;
+      }> = [
+          {
+              id: 'gonavi.runSelectedSql',
+              label: translate('query_editor.action.run_selected_sql'),
+              scope: 'selection',
+              contextMenuOrder: 1,
+              precondition: 'editorHasSelection',
+          },
+          {
+              id: 'gonavi.runAllSql',
+              label: translate('query_editor.action.run_all_sql'),
+              scope: 'all',
+              contextMenuOrder: 2,
+          },
+      ];
+
+      sqlExecutionContextMenuActionDisposablesRef.current = actions.map((action) => editor.addAction({
+          id: action.id,
+          label: action.label,
+          precondition: action.precondition,
+          contextMenuGroupId: '0_execution',
+          contextMenuOrder: action.contextMenuOrder,
+          run: () => {
+              window.dispatchEvent(new CustomEvent('gonavi:run-active-query', {
+                  detail: { scope: action.scope },
+              }));
+          },
+      }));
+  }, [disposeSqlExecutionContextMenuActions, isElasticsearchMode, languagePreference]);
 
   const disposeTransformCaseContextMenuActions = useCallback(() => {
       transformCaseActionDisposablesRef.current.forEach((disposable) => disposable?.dispose?.());
@@ -4349,6 +4401,7 @@ const QueryEditor: React.FC<{ tab: TabData; isActive?: boolean }> = ({ tab, isAc
                   requestSeq,
                   currentRequestSeq: schemaLoadSeqRef.current,
                   latestSelectedSchema: latestSelectedSchemaRef.current,
+                  explicitSchema: String(tab.schemaName || ''),
                   rememberedSchema: String(tab.schemaName || ''),
                   currentSchema: databaseDefaultSchema,
                   schemaNames: Array.isArray(result.schemas) ? result.schemas : [],
@@ -5013,11 +5066,12 @@ const QueryEditor: React.FC<{ tab: TabData; isActive?: boolean }> = ({ tab, isAc
       let editSql = `${sqlTemplateHeader}\n-- ${translate('sidebar.sql_template.modify_then_execute')}\n${buildQueryEditorRoutineEditFallbackSql(targetRoutineName, normalizedRoutineType)}`;
 
       const conn = connectionsRef.current.find((item) => item.id === connectionId);
+      const parsedRoutine = splitSidebarQualifiedName(targetRoutineName);
+      const targetSchemaName = String(navigationTarget.schemaName || parsedRoutine.schemaName || '').trim();
       if (conn) {
           const dialect = normalizeMetadataDialect(conn);
-          const parsedRoutine = splitSidebarQualifiedName(targetRoutineName);
           const routineObjectName = parsedRoutine.objectName || targetRoutineName;
-          const routineSchemaName = String(navigationTarget.schemaName || parsedRoutine.schemaName || '').trim();
+          const routineSchemaName = targetSchemaName;
           const safeName = escapeQueryEditorObjectEditSqlLiteral(routineObjectName);
           const safeSchema = escapeQueryEditorObjectEditSqlLiteral(routineSchemaName);
           const safeDbName = escapeQueryEditorObjectEditSqlLiteral(targetDbName);
@@ -5127,7 +5181,7 @@ const QueryEditor: React.FC<{ tab: TabData; isActive?: boolean }> = ({ tab, isAc
       }
 
       addTab({
-          id: `query-edit-routine-${connectionId}-${targetDbName}-${targetRoutineName}-${Date.now()}`,
+          id: `query-edit-routine-${connectionId}-${targetDbName}${targetSchemaName ? `-${targetSchemaName}` : ''}-${targetRoutineName}-${Date.now()}`,
           title: translate('sidebar.tab.edit_routine', {
               type: routineTypeLabel,
               name: targetRoutineName,
@@ -5135,8 +5189,11 @@ const QueryEditor: React.FC<{ tab: TabData; isActive?: boolean }> = ({ tab, isAc
           type: 'query',
           connectionId,
           dbName: targetDbName,
+          schemaName: targetSchemaName || undefined,
           query: editSql,
           queryMode: 'object-edit',
+          routineName: targetRoutineName,
+          routineType: normalizedRoutineType,
           returnToTabId: tab.id || undefined,
       });
   }, [addTab, tab.id]);
@@ -5221,7 +5278,7 @@ const QueryEditor: React.FC<{ tab: TabData; isActive?: boolean }> = ({ tab, isAc
       }
 
       addTab({
-          id: `query-edit-object-${connectionId}-${targetDbName}-${objectEditName}-${Date.now()}`,
+          id: `query-edit-object-${connectionId}-${targetDbName}${targetSchemaName ? `-${targetSchemaName}` : ''}-${objectEditName}-${Date.now()}`,
           title: translate('definition_viewer.edit.tab_title', {
               object: objectLabel,
               name: objectEditName,
@@ -5229,6 +5286,7 @@ const QueryEditor: React.FC<{ tab: TabData; isActive?: boolean }> = ({ tab, isAc
           type: 'query',
           connectionId,
           dbName: targetDbName,
+          schemaName: targetSchemaName || undefined,
           query: buildQueryEditorEditableDefinitionSql(
               definitionTabType,
               latestDefinition,
@@ -5236,6 +5294,17 @@ const QueryEditor: React.FC<{ tab: TabData; isActive?: boolean }> = ({ tab, isAc
               objectLabel,
           ),
           queryMode: 'object-edit',
+          ...(navigationTarget.type === 'view' || navigationTarget.type === 'materialized-view'
+              ? {
+                  viewName: targetObjectName,
+                  viewKind: (navigationTarget.type === 'materialized-view' ? 'materialized' : 'view') as 'view' | 'materialized',
+                  objectType: (navigationTarget.type === 'materialized-view' ? 'materialized-view' : 'view') as 'view' | 'materialized-view',
+              }
+              : navigationTarget.type === 'sequence'
+                  ? { sequenceName: targetObjectName }
+                  : navigationTarget.type === 'package'
+                      ? { packageName: targetObjectName }
+                      : {}),
           returnToTabId: tab.id || undefined,
       });
   }, [addTab, tab.id]);
@@ -5251,6 +5320,7 @@ const QueryEditor: React.FC<{ tab: TabData; isActive?: boolean }> = ({ tab, isAc
       const conn = connectionsRef.current.find((item) => item.id === connectionId);
       const dialect = conn ? normalizeMetadataDialect(conn) : '';
       const triggerTableName = String(navigationTarget.tableName || '').trim();
+      const targetSchemaName = String(navigationTarget.schemaName || '').trim();
       let latestDefinition = '';
       if (conn) {
           const connectionConfig = buildQueryEditorObjectDefinitionConnectionConfig(conn);
@@ -5290,11 +5360,12 @@ const QueryEditor: React.FC<{ tab: TabData; isActive?: boolean }> = ({ tab, isAc
           : '';
 
       addTab({
-          id: `query-edit-trigger-${connectionId}-${targetDbName}-${targetTriggerName}-${Date.now()}`,
+          id: `query-edit-trigger-${connectionId}-${targetDbName}${targetSchemaName ? `-${targetSchemaName}` : ''}-${targetTriggerName}-${Date.now()}`,
           title: translate('trigger_viewer.tab.edit_trigger_title', { name: targetTriggerName }),
           type: 'query',
           connectionId,
           dbName: targetDbName,
+          schemaName: targetSchemaName || undefined,
           query: buildEditableTriggerSql(targetTriggerName, latestDefinition, {
               dropSql: triggerDropSql,
               translate,
@@ -5348,6 +5419,7 @@ const QueryEditor: React.FC<{ tab: TabData; isActive?: boolean }> = ({ tab, isAc
       const suggestController = editor.getContribution?.('editor.contrib.suggestController') as {
           widget?: { value?: { _details?: { widget?: { layout?: (width: number, height: number) => void } } } };
       } | null;
+      installQueryEditorSuggestWidgetWidth(editor);
       const suggestDetailsWidget = suggestController?.widget?.value?._details?.widget;
       if (suggestDetailsWidget?.layout) {
           const originalSuggestDetailsLayout = suggestDetailsWidget.layout.bind(suggestDetailsWidget);
@@ -5947,6 +6019,9 @@ const QueryEditor: React.FC<{ tab: TabData; isActive?: boolean }> = ({ tab, isAc
               ),
               probeContext.context,
               currentSchemaRef.current,
+              useStore.getState().appearance.queryTableCtrlClickAction === 'locate'
+                  ? 'locate'
+                  : 'open-design',
           );
           if (decorations.length === 0) {
               clearQueryEditorLinkDecorations(editor, linkDecorationIdsRef);
@@ -6031,6 +6106,93 @@ const QueryEditor: React.FC<{ tab: TabData; isActive?: boolean }> = ({ tab, isAc
           setQueryEditorMouseCursor(editor, '');
       };
       const editorDomNode = editor.getDomNode?.();
+      const isQueryEditorFindWidgetFocused = (): boolean => {
+          const activeElement = editorDomNode?.ownerDocument?.activeElement
+              || (typeof document !== 'undefined' ? document.activeElement : null);
+          try {
+              return Boolean(activeElement?.closest?.(
+                  '.find-widget, .monaco-inputbox, .find-part, .replace-part',
+              ));
+          } catch {
+              return false;
+          }
+      };
+      const isQueryEditorImeInputEvent = (rawEvent: Event): boolean => {
+          // Monaco keeps the SQL editor's text-focus state separate from focus in its find/replace widget.
+          // Wails can occasionally retarget IME events to the hidden SQL textarea after that focus moved.
+          if (editor.hasTextFocus?.() === false || isQueryEditorFindWidgetFocused()) {
+              return false;
+          }
+          const target = (rawEvent as any)?.target;
+          // Keep synthetic/test events and older WebView events without a target on the existing path.
+          if (!target) {
+              return true;
+          }
+
+          const safeClosest = (node: any, selector: string): any => {
+              try {
+                  return node?.closest?.(selector) || null;
+              } catch {
+                  return null;
+              }
+          };
+          const hasClass = (node: any, className: string): boolean => {
+              try {
+                  if (node?.classList?.contains?.(className)) {
+                      return true;
+                  }
+              } catch {
+                  // Fall through to className for lightweight DOM shims.
+              }
+              const rawClassName = typeof node?.className === 'string'
+                  ? node.className
+                  : String(node?.className?.baseVal || '');
+              return new RegExp(`(?:^|\\s)${className}(?:\\s|$)`).test(rawClassName);
+          };
+          let eventPath: any[] = [target];
+          try {
+              const composedPath = (rawEvent as any)?.composedPath?.();
+              if (Array.isArray(composedPath) && composedPath.length > 0) {
+                  eventPath = composedPath;
+              }
+          } catch {
+              // Some WebView event shims expose composedPath but throw when it is unavailable.
+          }
+
+          const isFindWidgetEvent = eventPath.some((node) => (
+              hasClass(node, 'find-widget')
+              || hasClass(node, 'monaco-inputbox')
+              || hasClass(node, 'find-part')
+              || hasClass(node, 'replace-part')
+          )) || Boolean(safeClosest(
+              target,
+              '.find-widget, .monaco-inputbox, .find-part, .replace-part',
+          ));
+          if (isFindWidgetEvent) {
+              return false;
+          }
+
+          const inputArea = eventPath.find((node) => hasClass(node, 'inputarea'))
+              || safeClosest(target, '.monaco-editor .inputarea, .inputarea');
+          if (!inputArea) {
+              return false;
+          }
+
+          const owningEditor = safeClosest(inputArea, '.monaco-editor');
+          if (owningEditor && editorDomNode && owningEditor !== editorDomNode) {
+              return false;
+          }
+          if (editorDomNode && typeof editorDomNode.contains === 'function') {
+              try {
+                  if (!editorDomNode.contains(inputArea)) {
+                      return false;
+                  }
+              } catch {
+                  // Keep the class-based check when a lightweight DOM shim lacks contains().
+              }
+          }
+          return true;
+      };
       const clearImeCompositionFallbackTimer = () => {
           if (imeCompositionFallbackTimerRef.current !== null) {
               clearTimeout(imeCompositionFallbackTimerRef.current);
@@ -6065,7 +6227,10 @@ const QueryEditor: React.FC<{ tab: TabData; isActive?: boolean }> = ({ tab, isAc
               endPosition.column,
           );
       };
-      const handleImeCompositionStart = () => {
+      const handleImeCompositionStart = (rawEvent: Event) => {
+          if (!isQueryEditorImeInputEvent(rawEvent)) {
+              return;
+          }
           clearImeCompositionFallbackTimer();
           imeCompositionFallbackRef.current = {
               editor,
@@ -6076,6 +6241,9 @@ const QueryEditor: React.FC<{ tab: TabData; isActive?: boolean }> = ({ tab, isAc
           };
       };
       const handleImeBeforeInput = (rawEvent: Event) => {
+          if (!isQueryEditorImeInputEvent(rawEvent)) {
+              return;
+          }
           const snapshot = imeCompositionFallbackRef.current;
           if (!snapshot || snapshot.editor !== editor) {
               return;
@@ -6087,6 +6255,9 @@ const QueryEditor: React.FC<{ tab: TabData; isActive?: boolean }> = ({ tab, isAc
           }
       };
       const handleImeCompositionEnd = (rawEvent: Event) => {
+          if (!isQueryEditorImeInputEvent(rawEvent)) {
+              return;
+          }
           const snapshot = imeCompositionFallbackRef.current;
           imeCompositionFallbackRef.current = null;
           const committedText = String((rawEvent as CompositionEvent).data ?? '') || snapshot?.committedText || '';
@@ -6098,7 +6269,11 @@ const QueryEditor: React.FC<{ tab: TabData; isActive?: boolean }> = ({ tab, isAc
           clearImeCompositionFallbackTimer();
           imeCompositionFallbackTimerRef.current = setTimeout(() => {
               imeCompositionFallbackTimerRef.current = null;
-              if (editorRef.current !== editor) {
+              if (
+                  editorRef.current !== editor
+                  || editor.hasTextFocus?.() === false
+                  || isQueryEditorFindWidgetFocused()
+              ) {
                   return;
               }
               const currentValue = getEditorText();
@@ -6474,14 +6649,34 @@ const QueryEditor: React.FC<{ tab: TabData; isActive?: boolean }> = ({ tab, isAc
           if (navigationTarget.type === 'table') {
               const targetTableName = String(navigationTarget.tableName || '').trim();
               if (!targetTableName) return;
+
+              // Keep the existing design-tab behavior as the default, but let
+              // the user opt into the faster sidebar locate flow. Read the
+              // store at click time because Monaco keeps this listener alive
+              // across appearance-setting changes and does not recreate it on
+              // every React render.
+              const queryTableCtrlClickAction = useStore.getState().appearance.queryTableCtrlClickAction;
+              if (queryTableCtrlClickAction === 'locate') {
+                  dispatchQueryEditorSidebarLocate({
+                      connectionId,
+                      dbName: targetDbName,
+                      tableName: targetTableName,
+                      schemaName: navigationTarget.schemaName,
+                      objectGroup: 'tables',
+                  });
+                  return;
+              }
+
               const openTableTab = () => {
+                  const targetSchemaName = String(navigationTarget.schemaName || '').trim();
                   addTab({
-                      id: `${connectionId}-${targetDbName}-table-${targetTableName}`,
+                      id: `${connectionId}-${targetDbName}${targetSchemaName ? `-${targetSchemaName}` : ''}-table-${targetTableName}`,
                       title: targetTableName,
                       type: 'table',
                       connectionId,
                       dbName: targetDbName,
                       tableName: targetTableName,
+                      schemaName: targetSchemaName || undefined,
                       initialViewMode: 'fields',
                       initialViewModeRequestId: String(Date.now()),
                       objectType: 'table',
@@ -6492,6 +6687,7 @@ const QueryEditor: React.FC<{ tab: TabData; isActive?: boolean }> = ({ tab, isAc
               const navigationActionKey = [
                   connectionId,
                   targetDbName,
+                  String(navigationTarget.schemaName || '').trim(),
                   normalizeCompletionQualifiedName(targetTableName),
                   navigationContextVersion,
               ].join('\u0000');
@@ -6605,6 +6801,7 @@ const QueryEditor: React.FC<{ tab: TabData; isActive?: boolean }> = ({ tab, isAc
               sharedActiveEditorModelUri = '';
           }
           disposeQueryEditorAiContextMenuActions();
+          disposeSqlExecutionContextMenuActions();
           disposeTransformCaseContextMenuActions();
           window.removeEventListener('keydown', syncModifierState);
           window.removeEventListener('keyup', syncModifierState);
@@ -6622,6 +6819,8 @@ const QueryEditor: React.FC<{ tab: TabData; isActive?: boolean }> = ({ tab, isAc
 
       refreshObjectDecorations();
 
+      // 注册 SQL 执行右键菜单操作
+      registerSqlExecutionContextMenuActions(editor);
       // 注册 AI 右键菜单操作
       registerQueryEditorAiContextMenuActions(editor);
       registerInsertSqlSnippetContextMenuAction(editor);
@@ -9426,9 +9625,9 @@ const QueryEditor: React.FC<{ tab: TabData; isActive?: boolean }> = ({ tab, isAc
       }
   };
 
-  const handleRun = async () => {
+  const handleRun = async (runScope: QueryEditorRunScope = 'default') => {
     if (isElasticsearchMode) {
-        await handleElasticsearchRun(false);
+        await handleElasticsearchRun(runScope === 'all');
         return;
     }
     if (canSelectQuerySchema && schemaLoading) {
@@ -9437,7 +9636,11 @@ const QueryEditor: React.FC<{ tab: TabData; isActive?: boolean }> = ({ tab, isAc
     }
     const currentQuery = getCurrentQuery();
     if (!currentQuery.trim()) return;
-    const executableSQL = getExecutableSQL();
+    const executableSQL = runScope === 'all'
+        ? currentQuery
+        : runScope === 'selection'
+            ? getSelectedSQL()
+            : getExecutableSQL();
     if (!executableSQL.trim()) {
         message.info(translate('query_editor.message.no_executable_sql'));
         clearUnpinnedResultSets();
@@ -10428,6 +10631,17 @@ const QueryEditor: React.FC<{ tab: TabData; isActive?: boolean }> = ({ tab, isAc
       const editor = editorRef.current;
       if (!editor) return;
 
+      registerSqlExecutionContextMenuActions(editor);
+
+      return () => {
+          disposeSqlExecutionContextMenuActions();
+      };
+  }, [disposeSqlExecutionContextMenuActions, languagePreference, registerSqlExecutionContextMenuActions]);
+
+  useEffect(() => {
+      const editor = editorRef.current;
+      if (!editor) return;
+
       registerTransformCaseContextMenuActions(editor);
 
       return () => {
@@ -10822,7 +11036,15 @@ const QueryEditor: React.FC<{ tab: TabData; isActive?: boolean }> = ({ tab, isAc
           if (!isActive) {
               return;
           }
-          if ((event as CustomEvent<{ requireSelection?: boolean }>).detail?.requireSelection) {
+          const detail = (event as CustomEvent<{
+              requireSelection?: boolean;
+              scope?: QueryEditorRunScope;
+          }>).detail;
+          if (detail?.scope === 'selection' || detail?.scope === 'all') {
+              void handleRun(detail.scope);
+              return;
+          }
+          if (detail?.requireSelection) {
               void handleRunSelectedShortcut();
               return;
           }
