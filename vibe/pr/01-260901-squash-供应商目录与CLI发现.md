@@ -5,7 +5,7 @@ GitHub: [#1131](https://github.com/Syngnat/GoNavi/pull/1131) MERGED；首版 [#1
 Branch: `feat/ai-provider-management-v2`（首版 `feat/ai-provider-management`；噪声归一 `feat/ai-provider-management-v3` 未开 PR）
 日期: 260901
 方式: squash
-过程稿: [供应商管理总卡](../../specs/260901/0000-ai-provider-management/task-card.md)
+过程稿: [供应商管理总卡](../specs/260901/0000-ai-provider-management/task-card.md)
 
 ## 1. 生命周期
 
@@ -110,8 +110,8 @@ Not covered: real model responses, Windows/Linux desktops, and signed release pa
 
 ## 3. Skills 与规则
 
-- 界面约定当时写在本机 `czz-docs/ai-provider-ui-conventions.md`，现迁到 [ai-provider-ui-conventions.md](../ai-provider-ui-conventions.md)。本 PR **不提交**该文件。
-- 核验通路 [gonavi-verify-build-restart.md](../gonavi-verify-build-restart.md) 与项目 Skill `gonavi-verify-build-restart` 同轮沉淀。Skill 物理来源在 CodeNote `Skills/projects/gonavi/`；本仓 `.agents/skills/` 与 `.claude/skills/` 为软链，gitignore。
+- 界面约定当时写在本机 `czz-docs/ai-provider-ui-conventions.md`，现迁到 [ai-provider-ui-conventions.md](../knowledge/ai-provider-ui-conventions.md)。本 PR **不提交**该文件。
+- 核验通路 [gonavi-verify-build-restart.md](../knowledge/gonavi-verify-build-restart.md) 与项目 Skill `gonavi-verify-build-restart` 同轮沉淀。Skill 物理来源在 CodeNote `Skills/projects/gonavi/`；本仓 `.agents/skills/` 与 `.claude/skills/` 为软链，gitignore。
 - 全局：commit 排除本机文档/产物符合 `github/rules.md` §2；PR 正文基本覆盖 §3 的 Summary / 用户可见行为 / 风险（例程排除）/ 核验。
 - 本仓压平规则见 [README.md](README.md)。
 

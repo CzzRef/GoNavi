@@ -7,7 +7,7 @@
 - **方式**：`squash` / `followup` / `pending`（尚未开 PR）。
 - **概要**：中文短题，与 GitHub title 互补，不替代 GitHub title。
 
-当前权威在本目录。旧 [czz-docs/upstream-pr-scope.md](../../../czz-docs/upstream-pr-scope.md) 已退役为指针。
+当前权威在本目录 `vibe/pr/`。旧 `czz-docs/upstream-pr-scope.md` 已删除，退役入口只留 [czz-docs/README.md](../../czz-docs/README.md)。从 `vibe/knowledge/upstream-pr/` 迁来后，那边只留跳转桩。
 
 新建下一条时复制 [_template.md](_template.md)，不要在 task card 里另写一份范围表。
 
@@ -15,16 +15,16 @@
 
 | 序号 | 标题 | 状态 | GitHub | 过程稿 |
 | --- | --- | --- | --- | --- |
-| 01 | [01-260901-squash-供应商目录与CLI发现](01-260901-squash-供应商目录与CLI发现.md) | MERGED | [#1131](https://github.com/Syngnat/GoNavi/pull/1131)（[#1130](https://github.com/Syngnat/GoNavi/pull/1130) CLOSED） | [供应商管理总卡](../../specs/260901/0000-ai-provider-management/task-card.md) |
+| 01 | [01-260901-squash-供应商目录与CLI发现](01-260901-squash-供应商目录与CLI发现.md) | MERGED | [#1131](https://github.com/Syngnat/GoNavi/pull/1131)（[#1130](https://github.com/Syngnat/GoNavi/pull/1130) CLOSED） | [供应商管理总卡](../specs/260901/0000-ai-provider-management/task-card.md) |
 | 02 | [02-260902-followup-设置页折叠与CLI续命](02-260902-followup-设置页折叠与CLI续命.md) | MERGED | [#1134](https://github.com/Syngnat/GoNavi/pull/1134) | 同上总卡第十四轮 |
-| 03 | [03-260903-squash-编辑收缩展示](03-260903-squash-编辑收缩展示.md) | opened | [#1155](https://github.com/Syngnat/GoNavi/pull/1155) | [编辑收缩卡](../../specs/260903/0000-provider-editor-compact/task-card.md) |
+| 03 | [03-260903-squash-编辑收缩展示](03-260903-squash-编辑收缩展示.md) | opened | [#1155](https://github.com/Syngnat/GoNavi/pull/1155) | [编辑收缩卡](../specs/260903/0000-provider-editor-compact/task-card.md) |
 
 ## 对上游的永久排除
 
 这些前缀**永远不进** `Syngnat/GoNavi` 的 PR：
 
 - `vibe/`（本仓过程与知识，含本目录）
-- `czz-docs/`（退役研究稿与归档桩）
+- `czz-docs/`（仅退役 README，不再放正文）
 - `.codemark/`、`build/evidence/`
 - `.gitignore` 里为本机代理发现加的 `.agents/`
 - `frontend/package.json.md5`

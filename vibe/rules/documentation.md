@@ -16,17 +16,18 @@ Date: 2026-09-03
 | New process docs | [../specs/](../specs/) | `vibe/specs/<yyMMdd>/<HHmm-task-id>/` |
 | Task cards | 上述 dated 目录里的 `task-card.md` | Standard non-requirement 的唯一过程 owner |
 | Requirement Spec | 同目录 `raw-requirement.md` + `spec.md` | 文档位置、PR 留痕等需求增量 |
-| Knowledge | [../knowledge/README.md](../knowledge/README.md) | 界面约定、核验通路、上游 PR 历史 |
-| Legacy | [../../czz-docs/README.md](../../czz-docs/README.md) | 已归档指针与 MCP 研究稿；**不是**当前 task card / PR 范围 |
+| Knowledge | [../knowledge/README.md](../knowledge/README.md) | 界面约定、核验通路、MCP 研究稿 |
+| PR history | [../pr/README.md](../pr/README.md) | 上游 PR 节奏化历史（独立目录） |
+| Legacy | [../../czz-docs/README.md](../../czz-docs/README.md) | 仅退役跳转；**不是**当前正文 |
 
 ## Project Mapping
 
 - **task card 只写在 `vibe/specs/`。** 禁止在 `czz-docs/` 新建或继续当作当前权威。
 - 新过程文档目录名：`vibe/specs/<yyMMdd>/<HHmm-task-id>/`。日期用 Asia/Shanghai 日历，时间用创建该目录时的实测 `HHmm`。
-- 上游 PR 的节奏化历史写在 [../knowledge/upstream-pr/](../knowledge/upstream-pr/README.md)，不写进 task card 当第二份范围表。
+- 上游 PR 的节奏化历史写在 [../pr/](../pr/README.md)，不写进 task card 当第二份范围表。
 - 可复用界面规则写在 [../knowledge/ai-provider-ui-conventions.md](../knowledge/ai-provider-ui-conventions.md)，不在 PR 记录里复制像素。
 - 不建 `vibe/ai-db/`。
-- 需求 Manifest 尚未单独立项；本轮文档位置需求的 canonical 就是本文件与 `upstream-pr` 索引。
+- 需求 Manifest 尚未单独立项；本轮文档位置需求的 canonical 就是本文件与 `vibe/pr/` 索引。
 
 ## Closeout
 

@@ -5,9 +5,9 @@ Date: 2026-09-03
 Status: `verified-r59`（2026-09-03 用户在 r59 核验包上确认通过）
 Product: GoNavi AI 设置 · 模型供应商
 Predecessor: [第十五轮认证字段默认纵向](../../260901/0000-ai-provider-management/task-card.md#第十五轮认证字段默认纵向) · [界面约定](../../../knowledge/ai-provider-ui-conventions.md)
-上游记录: [03-260903-squash-编辑收缩展示](../../../knowledge/upstream-pr/03-260903-squash-编辑收缩展示.md)
+上游记录: [03-260903-squash-编辑收缩展示](../../../pr/03-260903-squash-编辑收缩展示.md)
 
-> 当前路径：`vibe/specs/260903/0000-provider-editor-compact/task-card.md`。旧 `czz-docs/260903-provider-editor-compact-task-card.md` 只是归档桩。
+> 当前路径：`vibe/specs/260903/0000-provider-editor-compact/task-card.md`。旧 `czz-docs/260903-provider-editor-compact-task-card.md` 已删除，入口见 [czz-docs/README.md](../../../../czz-docs/README.md)。
 
 ## Task Documentation Sync Group
 
@@ -23,7 +23,7 @@ Predecessor: [第十五轮认证字段默认纵向](../../260901/0000-ai-provide
   "documents": [
     "vibe/specs/260903/0000-provider-editor-compact/task-card.md",
     "vibe/knowledge/ai-provider-ui-conventions.md",
-    "vibe/knowledge/upstream-pr/03-260903-squash-编辑收缩展示.md"
+    "vibe/pr/03-260903-squash-编辑收缩展示.md"
   ],
   "dependencies": [
     "frontend/src/components/ai/AISettingsProvidersSection.tsx",
@@ -46,7 +46,7 @@ Predecessor: [第十五轮认证字段默认纵向](../../260901/0000-ai-provide
   "git_scope_prefixes": [
     "vibe/specs/260903/0000-provider-editor-compact/",
     "vibe/knowledge/ai-provider-ui-conventions.md",
-    "vibe/knowledge/upstream-pr/03-260903-squash-编辑收缩展示.md"
+    "vibe/pr/03-260903-squash-编辑收缩展示.md"
   ]
 }
 ```
@@ -267,3 +267,7 @@ r58 核验包：`build/bin/GoNavi-provider-settings-260903-r58`（100547186 字�
 r59 核验包：`build/bin/GoNavi-provider-settings-260903-r59`（101861154 字节，SHA-256 `8e000301579a9f6f1bf505832414726a24831d2a552c6225a3ad17545e4f283e`），壳 `GoNavi-Provider-Verification-r59.app`，pid 62193 单实例。identifier 又换了：`connectionLayout` 回到默认纵向。
 
 **实机结果（2026-09-03）**：用户确认 r59 实验通过。覆盖 §7 清单，以及 r57（贴鼠标 / 抓手 / 行内浮窗）与 r58 并排阈值。未覆盖、仍不在本卡：已接入芯片行拖拽、真实模型回复、Windows/Linux 实机、签名发布包。
+
+## 16. #1155 Windows CLI 超时用例（2026-09-03）
+
+上游 Windows job 红在既有 `ChatStreamUsesRequestTimeoutWhenNoMeaningfulResponseArrives`（假 shell + git-bash，200ms 内 `Start()` 失败）。按 F-1-a 只改测试：新增 `hang-after-init` helper，提交到 `feat/ai-provider-editor-compact`。不改生产 `ChatStream`，不进本卡产品范围。

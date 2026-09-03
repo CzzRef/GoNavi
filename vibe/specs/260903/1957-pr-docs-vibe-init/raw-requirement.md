@@ -16,3 +16,5 @@ Source: 用户当前会话请求（非口述转写）
 之前的相关 PR 记录要进行重构优化，相关的索引链接引用也要进行优化。
 
 以及 task card 应该体现在 vibe（按 CodeNote AI 规则初始化）内相关 spec 记录，不应该在 czz-docs。
+
+Follow-up（同日）: `czz-docs` 里剩余内容可以迁进 `vibe`；PR 相关文档专门新开目录，把之前的记录迁移归档，并统筹相互引用同步。
