@@ -8,7 +8,9 @@
 
 - **不使用原生 `title`。** 系统气泡约一秒才出、指针一移开就消失，且无法配置。需要提示时用 antd `Tooltip`。
 - **进出延迟统一走共享常量**，进场 300ms、离场 150ms，取值锁在 `frontend/src/components/common/tooltipTiming.ts`。antd 默认的 100ms/100ms 会让指针扫过一排按钮时逐个闪烁。
-- **供应商设置页的提示不截鼠标。** 目录卡片、已隐藏行、ⓘ 与模型下拉都用 `passThroughHintTooltip`：离场 0ms，浮层 `pointer-events: none`。指针离开触发源立刻关掉，被浮层挡住的相邻项可以马上换新提示。
+- **供应商设置页的提示不截鼠标。** 目录卡片、已隐藏行、区块 ⓘ 与模型下拉都用 `passThroughHintTooltip`：离场 0ms，浮层 `pointer-events: none`。指针离开触发源立刻关掉，被浮层挡住的相邻项可以马上换新提示。
+- **含内部选择的标题 ⓘ 例外。** 「收起编辑」左侧的标题提示里有连接字段布局开关，必须能点到浮层内的按钮，因此走 `interactiveHintTooltip`：进场仍 300ms，离场 400ms，浮层 `pointer-events: auto`。取值仍锁在 `tooltipTiming.ts`，不要在组件里手写延迟。
+- **说明 + 分段钮 + ? 是共用件。** 分段钮直接复用顶部「紧凑 / 正常」的 `gonavi-ai-provider-density` 样式，不在浮层里另写一套边框、加粗或 `!important` 覆盖；钮文两字（「并排」「纵向」）。问号用 `passThroughHintTooltip`，正文只两行——并排一句、纵向一句（`connection_layout.inline_hint` / `stacked_hint`），不再有「够宽时可同一行」这类前导句；ⓘ 正文不含布局说明，只留模型选择那一句。
 - 仓库里仍有 `0.35 / 0.4 / 0.75` 三处手写延迟（`App.tsx`、`TableOverview.tsx`、`TitleBarQuickActions.tsx`），尚未收敛；新代码不要再新增手写值。
 
 ## B. 提示密度与信息层级
@@ -49,6 +51,15 @@
 - 抽屉态要铺满工作区，否则遮罩会在旁边裸露成灰板；抽屉外壳不透明度不足时，要显式隐藏底层内容，避免文字透出。
 - 工作区之上的都是固定占位，每削减一像素编辑区就多一像素。固定高度的列表区（如已接入列表）用 `min(px, vh)` 而不是纯像素，避免条目变多时挤压编辑区。
 - 顶栏说明与添加框、已接入工具条（密度/搜索）对齐预览稿的水平分组，间距只做小幅回放（约 +4–6px），不要把第十一轮的压缩整段撤掉。
+- **认证三字段默认单列。** URL 与 API Key 必须能看全，不要再用 730px 容器查询强制三列。并排是标题 ⓘ 里的可选布局：失焦时 URL 去 `https://` 并 `...` 头尾压缩、Key 只留头尾 4 位，所以一行只需容纳压缩后的文字——格式约 140px、URL 约 200px、Key 约 150px 起排（编辑区约 520px 即可三项同排），不够才换行；比压缩文字还窄时失焦输入框用省略号而不是裁切。点进输入框仍编辑全文。选择写入 `gonavi.ai.providers.layout.v1` 的 `connectionLayout`。
+- **单选项不要下拉。** API 格式只有一种时仍保留输入框边框（antd `Input` `readOnly`，`gonavi-ai-provider-fixed-value`）与 URL、Key 对齐，文字用 `--provider-muted` 浅灰，不出现 Select 箭头、不可编辑、不进 Tab 序。
+- **CLI 模型列表按格式缓存。** `AIGetCLIModelCatalog` 会真的拉起本机 CLI，进入编辑或重开设置页不重复调用：可用结果按 `apiFormat` 写进 `gonavi.ai.providers.modelCatalog.v1`（`cliModelCatalogCache.ts`），下次直接沿用；只有点 `n/m 已启用` 才强制重拉。`stale`、空列表、失败不入缓存，下次自动重试。
+- **目录与已隐藏列表可拖拽排序。** 顺序存 `layout.v1` 的 `presetOrder`（只存 key，新增预设按默认顺序补在已知项之后）。用 `@dnd-kit` 指针传感器（6px 起拖，点击不受影响），`rectSortingStrategy` 覆盖多列网格；拖动时原卡片留在流里变成虚化虚线占位并提前滑到落点，指针下是浮起的副本（`DragOverlay`）。搜索过滤中不允许拖（子序列的落点无法映射到全序）。两组共用一份全序，隐藏列表内部拖动只交换隐藏项的槽位，可见项位置不动。
+- **拖拽副本必须 portal 到 `<body>`。** 设置页弹窗带 `transform`，`position: fixed` 的副本若留在弹窗树内会以弹窗为参照、落后鼠标一个偏移量。`zIndex 1060`，主题变量用 `overlayStyle` 传过去；副本贴抓取点、微倾 + 阴影 + 半透明、`pointer-events: none`。可拖拽面悬浮 `cursor: grab`，拖动中由 `body.gonavi-ai-provider-dragging` 强制 `grabbing`；眼睛 / 恢复按钮保持 pointer。
+- **模型启用反馈落在该行。** 「已停用 / 已启用 / 先换默认 / 已添加」都是该行开关旁 1.6 秒的小浮窗（`MODEL_ROW_FLASH_MS`），不在弹层底部放共享说明行；`role=status` 只保留为视觉隐藏的 live region。停用行整行置灰。
+- **空的 CLI 折叠不要留。** 本机 CLI 没有认证字段时，不渲染「本机 CLI」`<details>`；ⓘ 挂到正在编辑的已接入芯片右上角。「已接入 CLI 无需重复添加」只在编辑已保存的 CLI 时出现在目录工具条原位。
+- **模型启用管理不要双页签。** 默认模型用上方选择器；`n/m 已启用` 只打开启用管理，点选择器本体只出普通菜单、不带管理外壳。候选项少时弹层随内容变矮。
+- **默认模型标题只一行。** 「选择模型；留空跟随 CLI 默认」、来源、范围都在标题左 ⓘ；右 ⓘ 仅 CLI 供应商出现，放 CLI 登录说明、命令、effort 未校验、能力读取失败与刷新说明。同一句说明不在两个 ⓘ 里重复。
 
 ## H. 命名
 

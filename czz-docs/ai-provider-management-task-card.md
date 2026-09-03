@@ -1,6 +1,6 @@
 # 供应商展示与测试优化
 
-状态：正式页面已落实预览验收后的管理交互和隐藏目录。上游 [#1131](https://github.com/Syngnat/GoNavi/pull/1131) 已于 2026-09-01 合入 `dev`。2026-09-01 第十二轮合并上游 `dev` 并修掉窄屏遮罩、弹窗缩放与高度跳动；第十三轮把编辑页的提示、定位与操作入口整体收敛，并把本轮沉淀的操作与界面规则落成两份正文加一个 project Skill。第十四轮补上编辑页折叠栏箭头、顶栏间距、已隐藏底栏抽屉与提示不截鼠标，当前核验包为 r48；独立预览已按正式页当前源码重同步。2026-09-02 独立预览因单文件内联把 React 的 `$&` 展开而崩溃，已重建 `index.html`。页面短链是 `https://s.comeon365.com/fD3YJ82ww`；目录「最新」别名 `https://s.comeon365.com/fzGVLe__E` 曾被 README 抢走，已拨回 HTML。需硬刷新。合入后另有 CLI 流式与空闲续命。全量前端 5037 项中 5035 通过，两条失败分别为既有基线与上游自带。用户已在 r18 确认弹窗不再跳动，并在 r29/r30 逐项确认第十三轮的七项实机观感；余下未覆盖的仍是真实模型回复、Windows/Linux 实机与签名发布包。
+状态：正式页面已落实预览验收后的管理交互和隐藏目录。上游 [#1131](https://github.com/Syngnat/GoNavi/pull/1131) 已于 2026-09-01 合入 `dev`。2026-09-01 第十二轮合并上游 `dev` 并修掉窄屏遮罩、弹窗缩放与高度跳动；第十三轮把编辑页的提示、定位与操作入口整体收敛，并把本轮沉淀的操作与界面规则落成两份正文加一个 project Skill。第十四轮补上编辑页折叠栏箭头、顶栏间距、已隐藏底栏抽屉与提示不截鼠标，当时核验包为 r48；独立预览已按正式页当前源码重同步。2026-09-02 独立预览因单文件内联把 React 的 `$&` 展开而崩溃，已重建 `index.html`。页面短链是 `https://s.comeon365.com/fD3YJ82ww`；目录「最新」别名 `https://s.comeon365.com/fzGVLe__E` 曾被 README 抢走，已拨回 HTML。需硬刷新。合入后另有 CLI 流式与空闲续命。2026-09-03 认证字段改为默认纵向，保证 URL 与 API Key 看全；并排改为「收起编辑」左侧 ⓘ 内的可选布局。全量前端 5037 项中 5035 通过，两条失败分别为既有基线与上游自带。用户已在 r18 确认弹窗不再跳动，并在 r29/r30 逐项确认第十三轮的七项实机观感；余下未覆盖的仍是真实模型回复、Windows/Linux 实机与签名发布包。
 
 工作分支为 `czz-dev`，实施起点为 `4cc7493c`。第十二轮把上游 `Syngnat/GoNavi` 的 `dev`（`89f9ad71`）合并进来，合并基为 `9ef337cd`，合并提交为 `44e5e3e3`；`origin/dev` 未参与。本轮获得重启、Computer Use 核验、优化、提交和推送授权；交付目标是新建 `origin/czz-dev`，不合并或覆盖 `origin/dev`。提交结果以 Git 历史和远端引用为准。
 
@@ -74,6 +74,34 @@ Grok 未安装、未登录、空输出、零退出拒绝、非零退出和超时
 同轮按 PREVIEW R33 顶栏分组，说明/添加框与目录标题/查找框共用三列网格；当前正式页列间距为 8px，密度/搜索行距小幅回放。r35/r37 为并行会话产物，磁盘镜像未覆盖。该段当时核验包写到 r45；其后正式页与独立预览已对齐 r48。
 
 合入 #1131 之后的代码增量：CLI 流式与空闲续命让 Grok/Cursor 真流式、Codex 思考过程边扫边推，stdout 重置 3 分钟空闲钟、硬上限 15 分钟；设置页跟进折叠栏箭头、顶栏三列、已隐藏底栏可拖高、提示浮层不截鼠标、目录最小宽 128px。核验停旧起新改为调用 `restart.sh`，只记本机文档。例程无条件禁止已按产品决定回滚。跟进 PR 为 [#1134](https://github.com/Syngnat/GoNavi/pull/1134)（压平分支 `feat/ai-provider-ui-followup` 单提交）。
+
+## 第十五轮认证字段默认纵向
+
+2026-09-03 实机反馈：宽编辑区把 API 格式、URL、API Key 强制三列后，URL 被截成 `https://api.tokenro`。默认改回单列，URL 与 Key 占满编辑宽；并排改为「收起编辑」左侧 ⓘ 浮层里的可选开关，写入本机 `connectionLayout`。并排时 URL 至少 320px、Key 至少 220px，不够则换行，不再用 730px 容器查询硬挤三列。该 ⓘ 因含选择控件走 `interactiveHintTooltip`，其它提示仍不截鼠标。
+
+本轮核验包 r49：`build/bin/GoNavi-provider-settings-260903-r49`（100530674 字节，SHA-256 `a73b8d38db1a26150ff06f4c98da2fb940fdcc2030ad226203d23313d1c05266`），壳为 `GoNavi-Provider-Verification-r49.app`。编译与离线测试不构成实机通过。
+
+## 第十六轮并排压缩、布局分段钮与空 CLI 折叠
+
+2026-09-03：并排时 URL 去协议、格式/Key 用 `...` 头尾压缩仍可编辑；布局 ⓘ 改为上说明、下描边分段钮、右问号（`AIHintChoiceControl`）；单选项 API 格式不下拉；模型弹层去掉「选择默认」页签；空「本机 CLI」折叠取消，ⓘ 挂已接入芯片右上角；目录「已接入 CLI」提示仅编辑已保存 CLI 时出现。
+
+本轮核验包 r50：`build/bin/GoNavi-provider-settings-260903-r50`（100547186 字节，SHA-256 `e46832e32608b975125b29eddf83a19f65836f7843484dce74c642c5bed46b10`），壳为 `GoNavi-Provider-Verification-r50.app`。进程回读 pid 19790，仅此一例。编译与离线测试不构成实机通过。
+
+r55 修正（2026-09-03，按 [260903 task card §11](260903-provider-editor-compact-task-card.md#11-r55-核验与修正2026-09-03)）：「够宽时可同一行」从 ⓘ 正文移进 `?`；默认模型标题旁去掉长文；来源只留左 ⓘ，右 ⓘ 仅 CLI 且并入原空折叠的命令/能力失败/effort 未校验；点选择器本体不再带「启用管理」外壳；`is-default` 只标默认行；并排 URL 悬浮全文；模型目录回退限同一编辑会话；清掉 effort 死 prop 与孤儿 CSS。`tsc` 通过；全量 vitest 5144 项中 5142 通过，两条失败均为已知基线（`main.browserMock`、`testPolicy`）。
+
+r55 核验包：`build/bin/GoNavi-provider-settings-260903-r55`（100547186 字节，SHA-256 `8633caaed2004d397e9195fb42d816f270f3e799a8965bf2b2d052d0b15d671d`），已被 r56 替换。
+
+r56 修正（2026-09-03，按 [260903 task card §12](260903-provider-editor-compact-task-card.md#12-r56-实机反馈修正2026-09-03)）：单选项 API 格式恢复输入框边框、浅灰只读；CLI 模型列表按 `apiFormat` 缓存到 `gonavi.ai.providers.modelCatalog.v1`，进编辑不重拉、点 `n/m 已启用` 才强刷；`?` 去首句、分「并排 / 纵向」两行，钮文两字并直接复用顶部 density 样式；目录网格与已隐藏列表用 `@dnd-kit` 拖拽排序（`presetOrder` 入 `layout.v1`），原卡虚化虚线占位提前滑到落点、指针下浮起副本，搜索中禁拖。`tsc` 通过；全量 vitest 5153 项中 5151 通过（+9 为本轮新增用例），两条失败仍为已知基线。
+
+r56 核验包：`build/bin/GoNavi-provider-settings-260903-r56`（100547186 字节，SHA-256 `6ceed9b833f806ca3fe92da92f464e2deb1a7ce6c8de9c9d1beed69c8956953e`），已被 r57 替换。
+
+r57 修正（2026-09-03，按 [260903 task card §13](260903-provider-editor-compact-task-card.md#13-r57-实机反馈修正2026-09-03)）：拖拽副本 portal 到 `<body>` 修掉弹窗 `transform` 造成的鼠标错位，副本微倾半透明贴抓取点；可拖拽面悬浮抓手光标、拖动中全局 `grabbing`；模型启用管理的「已停用」等反馈改为该行开关旁 1.6 秒小浮窗，底部说明行删除，停用行整行置灰。`tsc` 通过；全量 vitest 5154 项中 5152 通过（+1 为本轮新增用例），两条失败仍为已知基线。
+
+r57 核验包：`build/bin/GoNavi-provider-settings-260903-r57`（100547186 字节，SHA-256 `9a5d6000b7bb83bf9261e03e10c2e6521a90767b4160b09988f0f74147ede4c3`），已被 r58 替换。
+
+r58 修正（2026-09-03，按 [260903 task card §14](260903-provider-editor-compact-task-card.md#14-r58-并排阈值2026-09-03)）：并排换行阈值按压缩后文字重定（格式 140 / URL 200 / Key 150px，约 520px 起三项同排），失焦字段比压缩文字窄时省略号。仅 CSS。
+
+本轮核验包 r58：`build/bin/GoNavi-provider-settings-260903-r58`（100547186 字节，SHA-256 `698ac52eef253be6a2f6ddfc907e90abf901a8dde567c824044add59d930ce71`），壳为 `GoNavi-Provider-Verification-r58.app`。进程回读 pid 52168，仅此一例。r57 三条与 r58 一条待用户在 r58 逐项点过。已接入芯片行的拖拽排序仍未做。
 
 ## 第十二轮交互与缩放修正
 
@@ -191,7 +219,8 @@ Computer Use 在真实 r9 桌面发现：旧 Claude 配置将一个候选停用�
   "documents": [
     "czz-docs/ai-provider-management-task-card.md",
     "czz-docs/ai-provider-ui-conventions.md",
-    "czz-docs/upstream-pr-scope.md"
+    "czz-docs/upstream-pr-scope.md",
+    "czz-docs/260903-provider-editor-compact-task-card.md"
   ],
   "dependencies": [
     "frontend/src/components/AISettingsModal.tsx",
@@ -199,6 +228,12 @@ Computer Use 在真实 r9 桌面发现：旧 Claude 配置将一个候选停用�
     "frontend/src/components/ai/AISettingsProvidersSection.css",
     "frontend/src/components/ai/AIProviderModelSelect.tsx",
     "frontend/src/components/ai/useAIProviderLayout.ts",
+    "frontend/src/components/ai/AICompactValueInput.tsx",
+    "frontend/src/components/ai/AIHintChoiceControl.tsx",
+    "frontend/src/components/ai/AIProviderSortable.tsx",
+    "frontend/src/components/ai/cliModelCatalogCache.ts",
+    "frontend/src/components/ai/compactConnectionDisplay.ts",
+    "frontend/src/components/ai/providerPresetOrder.ts",
     "frontend/src/components/common/tooltipTiming.ts",
     "frontend/src/utils/aiProviderManagement.ts",
     "frontend/src/App.tsx",
@@ -215,6 +250,10 @@ Computer Use 在真实 r9 桌面发现：旧 Claude 配置将一个候选停用�
     "frontend/src/components/AISettingsModal.async.test.tsx",
     "frontend/src/components/ai/AIProviderModelSelect.test.tsx",
     "frontend/src/components/ai/AISettingsProvidersSection.mounted.test.tsx",
+    "frontend/src/components/ai/AISettingsProvidersSection.test.tsx",
+    "frontend/src/components/ai/cliModelCatalogCache.test.ts",
+    "frontend/src/components/ai/compactConnectionDisplay.test.ts",
+    "frontend/src/components/ai/providerPresetOrder.test.ts",
     "frontend/src/components/ai/useAIProviderLayout.test.ts",
     "frontend/src/components/common/tooltipTiming.test.ts",
     "internal/ai/provider/cli_idle_watchdog_test.go",
@@ -228,7 +267,8 @@ Computer Use 在真实 r9 桌面发现：旧 Claude 配置将一个候选停用�
   "git_scope_prefixes": [
     "czz-docs/ai-provider-management-task-card.md",
     "czz-docs/ai-provider-ui-conventions.md",
-    "czz-docs/upstream-pr-scope.md"
+    "czz-docs/upstream-pr-scope.md",
+    "czz-docs/260903-provider-editor-compact-task-card.md"
   ]
 }
 ```
