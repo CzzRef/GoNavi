@@ -30,7 +30,12 @@ const (
 	internalRoutePrefix       = "/__gonavi"
 	detachedWindowIDHeader    = "X-GoNavi-Detached-Window-ID"
 	eventSubscriberQueueLimit = 128
-	eventStreamDataChunkBytes = 256 << 10
+	// Reliable events are allowed bounded headroom over the broadcast queue so
+	// a critical targeted event can still be delivered after broadcasts fill
+	// the soft limit. A subscriber that remains slower than this hard limit is
+	// closed and must reconnect instead of retaining an unbounded queue.
+	eventSubscriberReliableQueueLimit = eventSubscriberQueueLimit * 2
+	eventStreamDataChunkBytes         = 256 << 10
 )
 
 var errorType = reflect.TypeOf((*error)(nil)).Elem()
@@ -147,10 +152,24 @@ func (s *eventSubscriber) enqueue(msg eventMessage, reliable bool) {
 		}
 		return
 	}
-	// AI stream deltas are loss-sensitive. Once one delta is queued, later
-	// deltas for that session coalesce into it; the first delta and terminal
-	// events may therefore exceed the soft broadcast limit by a small amount.
-	if s.closed || (!reliable && !strings.HasPrefix(msg.Name, "ai:stream:") && len(s.queue)-s.head >= eventSubscriberQueueLimit) {
+	if s.closed {
+		s.mu.Unlock()
+		return
+	}
+	queueLen := len(s.queue) - s.head
+	if reliable && queueLen >= eventSubscriberReliableQueueLimit {
+		// Reliable delivery cannot silently drop the event, but retaining it
+		// forever would make a stalled detached window an unbounded memory
+		// sink. Close this stream and release its pending payloads; the child
+		// runtime will reconnect and obtain fresh state.
+		s.closed = true
+		s.queue = nil
+		s.head = 0
+		close(s.done)
+		s.mu.Unlock()
+		return
+	}
+	if !reliable && queueLen >= eventSubscriberQueueLimit {
 		s.mu.Unlock()
 		return
 	}
@@ -167,14 +186,6 @@ func (s *eventSubscriber) coalesceQueuedEventLocked(incoming eventMessage) bool 
 	if s == nil || s.closed {
 		return false
 	}
-	if strings.HasPrefix(incoming.Name, "ai:stream:") {
-		for index := len(s.queue) - 1; index >= s.head; index-- {
-			if s.queue[index].Name == incoming.Name {
-				return mergeQueuedAIStreamEvent(&s.queue[index], incoming)
-			}
-		}
-		return false
-	}
 	key := detachedSyncEventKey(incoming)
 	if key == "" {
 		return false
@@ -186,48 +197,6 @@ func (s *eventSubscriber) coalesceQueuedEventLocked(incoming eventMessage) bool 
 		}
 	}
 	return false
-}
-
-func mergeQueuedAIStreamEvent(existing *eventMessage, incoming eventMessage) bool {
-	if existing == nil || existing.Name != incoming.Name || len(existing.Args) != 1 || len(incoming.Args) != 1 {
-		return false
-	}
-	current, currentOK := existing.Args[0].(map[string]any)
-	next, nextOK := incoming.Args[0].(map[string]any)
-	if !currentOK || !nextOK || aiStreamPayloadIsTerminal(current) || aiStreamPayloadIsTerminal(next) {
-		return false
-	}
-	merged := make(map[string]any, len(current)+len(next))
-	for key, value := range current {
-		merged[key] = value
-	}
-	for key, value := range next {
-		merged[key] = value
-	}
-	for _, key := range []string{"content", "thinking", "reasoning_content"} {
-		merged[key] = stringValue(current[key]) + stringValue(next[key])
-	}
-	existing.Args = []any{merged}
-	return true
-}
-
-func aiStreamPayloadIsTerminal(payload map[string]any) bool {
-	if payload == nil {
-		return true
-	}
-	if done, _ := payload["done"].(bool); done {
-		return true
-	}
-	if strings.TrimSpace(stringValue(payload["error"])) != "" {
-		return true
-	}
-	toolCalls := reflect.ValueOf(payload["tool_calls"])
-	return toolCalls.IsValid() && (toolCalls.Kind() == reflect.Array || toolCalls.Kind() == reflect.Slice) && toolCalls.Len() > 0
-}
-
-func stringValue(value any) string {
-	text, _ := value.(string)
-	return text
 }
 
 func detachedSyncEventKey(msg eventMessage) string {
@@ -293,6 +262,8 @@ func (s *eventSubscriber) close() {
 		return
 	}
 	s.closed = true
+	s.queue = nil
+	s.head = 0
 	close(s.done)
 	s.mu.Unlock()
 }

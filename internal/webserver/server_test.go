@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/fs"
 	"net/http"
 	"net/http/httptest"
@@ -514,82 +513,77 @@ func TestEventHubEmitToSurvivesFullBroadcastQueue(t *testing.T) {
 	}
 }
 
-func TestEventHubAIStreamCoalescesWithoutLosingChunksOrTerminalEvents(t *testing.T) {
+func TestEventHubReliableQueueDisconnectsSlowDetachedWindowAtHardLimit(t *testing.T) {
+	hub := newEventHub()
+	subscriber := hub.subscribe("window-1")
+	t.Cleanup(func() { hub.unsubscribe(subscriber) })
+
+	for index := 0; index < eventSubscriberReliableQueueLimit; index++ {
+		hub.EmitTo("window-1", "gonavi:command", index)
+	}
+
+	subscriber.mu.Lock()
+	queueLen := len(subscriber.queue) - subscriber.head
+	closedBeforeOverflow := subscriber.closed
+	subscriber.mu.Unlock()
+	if queueLen != eventSubscriberReliableQueueLimit {
+		t.Fatalf("reliable queue length before overflow = %d, want %d", queueLen, eventSubscriberReliableQueueLimit)
+	}
+	if closedBeforeOverflow {
+		t.Fatal("reliable queue closed before reaching its hard limit")
+	}
+
+	hub.EmitTo("window-1", "gonavi:close", "close")
+	select {
+	case <-subscriber.done:
+	default:
+		t.Fatal("slow reliable subscriber was not disconnected after queue overflow")
+	}
+
+	subscriber.mu.Lock()
+	queueLen = len(subscriber.queue) - subscriber.head
+	closedAfterOverflow := subscriber.closed
+	subscriber.mu.Unlock()
+	if queueLen != 0 {
+		t.Fatalf("reliable queue retained %d messages after disconnect", queueLen)
+	}
+	if !closedAfterOverflow {
+		t.Fatal("subscriber was not marked closed after reliable queue overflow")
+	}
+
+	// A fresh SSE subscription for the same child ID still receives targeted
+	// lifecycle events after the stalled stream has been removed.
+	hub.unsubscribe(subscriber)
+	reconnected := hub.subscribe("window-1")
+	t.Cleanup(func() { hub.unsubscribe(reconnected) })
+	hub.EmitTo("window-1", "gonavi:close", "close")
+	message, ok := reconnected.dequeue()
+	if !ok || message.Name != "gonavi:close" {
+		t.Fatalf("reconnected subscriber message = %#v, %v", message, ok)
+	}
+}
+
+func TestEventHubRunEventsUseTheNormalBestEffortQueueLimit(t *testing.T) {
 	hub := newEventHub()
 	target := hub.subscribe("window-1")
 	t.Cleanup(func() { hub.unsubscribe(target) })
 
-	// Fill the queue with unrelated broadcasts, leaving one slot for this AI
-	// session. Every later token must merge into that slot instead of dropping.
-	for index := 0; index < eventSubscriberQueueLimit-1; index++ {
+	// Run events are persisted in the Ledger and consumers fill sequence gaps
+	// through AIReadAgentRun. The bridge therefore treats them as normal
+	// best-effort notifications instead of retaining the old AI stream merger.
+	for index := 0; index < eventSubscriberQueueLimit; index++ {
 		hub.Emit("gonavi:progress", index)
 	}
-	var expectedContent strings.Builder
-	var expectedThinking strings.Builder
-	for index := 0; index < eventSubscriberQueueLimit+8; index++ {
-		content := fmt.Sprintf("<%d>", index)
-		thinking := fmt.Sprintf("[%d]", index)
-		expectedContent.WriteString(content)
-		expectedThinking.WriteString(thinking)
-		hub.EmitToBestEffort("window-1", "ai:stream:session-1", map[string]any{
-			"content":  content,
-			"thinking": thinking,
-			"done":     false,
-		})
-	}
-	hub.EmitToBestEffort("window-1", "ai:stream:session-1", map[string]any{
-		"tool_calls": []map[string]any{{"id": "tool-1"}},
-	})
-	hub.EmitToBestEffort("window-1", "ai:stream:session-1", map[string]any{"done": true})
-	hub.EmitToBestEffort("window-1", "ai:stream:session-1", map[string]any{
-		"error": "upstream closed",
-		"done":  true,
-	})
+	hub.EmitToBestEffort("window-1", "ai:run:event", map[string]any{"runId": "run-1", "sequence": 1})
 
-	for index := 0; index < eventSubscriberQueueLimit-1; index++ {
+	for index := 0; index < eventSubscriberQueueLimit; index++ {
 		message, ok := target.dequeue()
 		if !ok || message.Name != "gonavi:progress" {
 			t.Fatalf("broadcast %d = %#v, %v", index, message, ok)
 		}
 	}
-
-	var actualContent strings.Builder
-	var actualThinking strings.Builder
-	var sawToolCalls bool
-	var sawDone bool
-	var sawError bool
-	for {
-		message, ok := target.dequeue()
-		if !ok {
-			break
-		}
-		if message.Name != "ai:stream:session-1" || len(message.Args) != 1 {
-			t.Fatalf("unexpected AI event: %#v", message)
-		}
-		payload, ok := message.Args[0].(map[string]any)
-		if !ok {
-			t.Fatalf("AI payload = %#v", message.Args[0])
-		}
-		actualContent.WriteString(stringValue(payload["content"]))
-		actualThinking.WriteString(stringValue(payload["thinking"]))
-		if toolCalls := reflect.ValueOf(payload["tool_calls"]); toolCalls.IsValid() && toolCalls.Kind() == reflect.Slice && toolCalls.Len() > 0 {
-			sawToolCalls = true
-		}
-		if done, _ := payload["done"].(bool); done {
-			sawDone = true
-		}
-		if stringValue(payload["error"]) == "upstream closed" {
-			sawError = true
-		}
-	}
-	if actualContent.String() != expectedContent.String() {
-		t.Fatalf("coalesced content length = %d, want %d", actualContent.Len(), expectedContent.Len())
-	}
-	if actualThinking.String() != expectedThinking.String() {
-		t.Fatalf("coalesced thinking length = %d, want %d", actualThinking.Len(), expectedThinking.Len())
-	}
-	if !sawToolCalls || !sawDone || !sawError {
-		t.Fatalf("terminal delivery tool=%v done=%v error=%v", sawToolCalls, sawDone, sawError)
+	if _, ok := target.dequeue(); ok {
+		t.Fatal("run event should be dropped at the normal best-effort queue limit")
 	}
 }
 
@@ -709,6 +703,89 @@ func TestHandleEventsRegistersDetachedWindowHeader(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Fatal("event stream did not stop after cancellation")
 	}
+}
+
+func TestHandleEventsDisconnectsBlockedDetachedConsumerAfterReliableOverflow(t *testing.T) {
+	events := newEventHub()
+	server := &Server{events: events}
+	requestContext, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+	request := httptest.NewRequest(http.MethodGet, internalRoutePrefix+"/events", nil).WithContext(requestContext)
+	request.Header.Set(detachedWindowIDHeader, "window-42")
+	writer := newBlockingEventStreamTestWriter()
+	var releaseOnce sync.Once
+	release := func() { releaseOnce.Do(func() { close(writer.release) }) }
+	t.Cleanup(release)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		server.handleEvents(writer, request)
+	}()
+
+	select {
+	case <-writer.flushed:
+	case <-time.After(time.Second):
+		t.Fatal("event stream did not connect")
+	}
+	events.EmitTo("window-42", "gonavi:blocked", "first")
+	select {
+	case <-writer.started:
+	case <-time.After(time.Second):
+		t.Fatal("event stream did not block on the first targeted event")
+	}
+
+	events.mu.RLock()
+	var subscriber *eventSubscriber
+	for candidate := range events.subscribers {
+		if candidate.targetID == "window-42" {
+			subscriber = candidate
+			break
+		}
+	}
+	events.mu.RUnlock()
+	if subscriber == nil {
+		t.Fatal("detached subscriber was not registered")
+	}
+
+	for index := 0; index < eventSubscriberReliableQueueLimit; index++ {
+		events.EmitTo("window-42", "gonavi:command", index)
+	}
+	events.EmitTo("window-42", "gonavi:overflow", "close")
+	select {
+	case <-subscriber.done:
+	case <-time.After(time.Second):
+		t.Fatal("blocked detached consumer was not disconnected after reliable overflow")
+	}
+
+	release()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("event stream handler did not exit after the blocked write was released")
+	}
+}
+
+type blockingEventStreamTestWriter struct {
+	*eventStreamTestWriter
+	started chan struct{}
+	release chan struct{}
+	once    sync.Once
+}
+
+func newBlockingEventStreamTestWriter() *blockingEventStreamTestWriter {
+	return &blockingEventStreamTestWriter{
+		eventStreamTestWriter: newEventStreamTestWriter(),
+		started:               make(chan struct{}),
+		release:               make(chan struct{}),
+	}
+}
+
+func (w *blockingEventStreamTestWriter) Write(payload []byte) (int, error) {
+	if strings.Contains(string(payload), `"name":"gonavi:blocked"`) {
+		w.once.Do(func() { close(w.started) })
+		<-w.release
+	}
+	return w.eventStreamTestWriter.Write(payload)
 }
 
 type eventStreamTestWriter struct {

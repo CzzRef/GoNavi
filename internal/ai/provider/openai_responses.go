@@ -360,6 +360,49 @@ func cloneOpenAIResponsesRawItems(items []json.RawMessage) []json.RawMessage {
 	return result
 }
 
+// canonicalizeOpenAIResponsesFunctionCallsForInput removes response-only
+// fields before a function call is sent back as a later Responses input item.
+// Several OpenAI-compatible endpoints emit an `id` and `status` in response
+// output but reject those fields for the corresponding input variant.
+func canonicalizeOpenAIResponsesFunctionCallsForInput(items []json.RawMessage) []json.RawMessage {
+	if len(items) == 0 {
+		return nil
+	}
+
+	result := make([]json.RawMessage, 0, len(items))
+	for _, rawItem := range items {
+		var item struct {
+			Type      string `json:"type"`
+			CallID    string `json:"call_id"`
+			Name      string `json:"name"`
+			Arguments string `json:"arguments"`
+		}
+		if err := json.Unmarshal(rawItem, &item); err != nil || item.Type != "function_call" {
+			result = append(result, append(json.RawMessage(nil), rawItem...))
+			continue
+		}
+
+		arguments, validArguments := normalizeOpenAIToolCallArguments(item.Arguments)
+		if strings.TrimSpace(item.CallID) == "" || strings.TrimSpace(item.Name) == "" || !validArguments {
+			// A malformed function call cannot be paired with a safe tool result.
+			// Drop it rather than preserving a request that compatible endpoints
+			// will reject as invalid input.
+			continue
+		}
+		encoded, err := json.Marshal(openAIResponsesInputItem{
+			Type:      "function_call",
+			CallID:    item.CallID,
+			Name:      item.Name,
+			Arguments: arguments,
+		})
+		if err != nil {
+			continue
+		}
+		result = append(result, json.RawMessage(encoded))
+	}
+	return result
+}
+
 func decodeOpenAIResponsesSessionState(state json.RawMessage) (openAIResponsesSessionState, bool) {
 	if len(state) == 0 {
 		return openAIResponsesSessionState{}, false
@@ -393,6 +436,7 @@ func encodeOpenAIResponsesSessionState(input []json.RawMessage, output []json.Ra
 	combined := make([]json.RawMessage, 0, len(input)+len(output))
 	combined = append(combined, cloneOpenAIResponsesRawItems(input)...)
 	combined = append(combined, cloneOpenAIResponsesRawItems(output)...)
+	combined = canonicalizeOpenAIResponsesFunctionCallsForInput(combined)
 	encoded, err := json.Marshal(openAIResponsesSessionState{Input: combined})
 	if err != nil {
 		return nil, fmt.Errorf("serialize OpenAI Responses session state failed: %w", err)
@@ -585,6 +629,82 @@ func openAIResponsesIncompleteError(result openAIResponsesResponse) error {
 	return fmt.Errorf("OpenAI Responses response incomplete: %s", reason)
 }
 
+// openAIResponsesTerminalError validates the final response envelope before
+// its output can update the conversation cursor. Some OpenAI-compatible
+// Responses endpoints emit response.completed even when the embedded response
+// itself failed, so the event type alone is not a success signal. Empty status
+// remains accepted for compatibility with providers that omit it on a normal
+// terminal event.
+func openAIResponsesTerminalError(result openAIResponsesResponse) error {
+	return openAIResponsesTerminalErrorWithDetails(
+		result,
+		false,
+		responseErrorMessage(result.Error),
+		responseErrorCode(result.Error),
+	)
+}
+
+// openAIResponsesCompletedStreamEventError applies the same terminal status
+// validation to a streamed completion event. A few OpenAI-compatible
+// providers put the failure detail on the event rather than inside response,
+// so accepting response.completed based on its embedded status alone would
+// incorrectly advance the provider state.
+func openAIResponsesCompletedStreamEventError(event openAIResponsesStreamEvent) error {
+	eventError := decodeOpenAIResponsesStreamError(event.Error)
+	hasTopLevelError := len(bytes.TrimSpace(event.Error)) > 0 && !bytes.Equal(bytes.TrimSpace(event.Error), []byte("null"))
+	hasTopLevelError = hasTopLevelError || strings.TrimSpace(event.Message) != "" || strings.TrimSpace(event.Code) != ""
+	return openAIResponsesTerminalErrorWithDetails(
+		event.Response,
+		hasTopLevelError,
+		responseErrorMessage(event.Response.Error),
+		eventError.Message,
+		event.Message,
+		responseErrorCode(event.Response.Error),
+		eventError.Code,
+		event.Code,
+	)
+}
+
+func openAIResponsesTerminalErrorWithDetails(
+	result openAIResponsesResponse,
+	hasTopLevelError bool,
+	details ...string,
+) error {
+	status := strings.ToLower(strings.TrimSpace(result.Status))
+	if status == "incomplete" || result.IncompleteDetails != nil {
+		return openAIResponsesIncompleteError(result)
+	}
+
+	if status == "" || status == "completed" {
+		if result.Error == nil && !hasTopLevelError {
+			return nil
+		}
+		if detail := firstOpenAIResponsesErrorDetail(details...); detail != "" {
+			return fmt.Errorf("OpenAI Responses API error: %s", detail)
+		}
+		return fmt.Errorf("OpenAI Responses API error")
+	}
+
+	if detail := firstOpenAIResponsesErrorDetail(details...); detail != "" {
+		return fmt.Errorf("OpenAI Responses response %s: %s", status, detail)
+	}
+	return fmt.Errorf("OpenAI Responses response %s", status)
+}
+
+func responseErrorMessage(detail *openAIResponsesError) string {
+	if detail == nil {
+		return ""
+	}
+	return detail.Message
+}
+
+func responseErrorCode(detail *openAIResponsesError) string {
+	if detail == nil {
+		return ""
+	}
+	return detail.Code
+}
+
 func (p *OpenAIResponsesProvider) Chat(ctx context.Context, req ai.ChatRequest) (*ai.ChatResponse, error) {
 	response, _, err := p.ChatWithState(ctx, nil, req)
 	return response, err
@@ -612,9 +732,10 @@ func (p *OpenAIResponsesProvider) ChatWithState(
 			req.ImageFallbackPrompt,
 			req.ImageOmittedNotice,
 		)
+		previousInput := canonicalizeOpenAIResponsesFunctionCallsForInput(previous.Input)
 		body.Input = append(
-			cloneOpenAIResponsesRawItems(previous.Input),
-			marshalOpenAIResponsesInput(buildOpenAIResponsesInputWithToolCallIDs(requestMessages, p.baseURL, responsesSessionToolCallIDs(previous.Input)))...,
+			previousInput,
+			marshalOpenAIResponsesInput(buildOpenAIResponsesInputWithToolCallIDs(requestMessages, p.baseURL, responsesSessionToolCallIDs(previousInput)))...,
 		)
 	}
 	respBody, err := p.doRequest(ctx, body)
@@ -630,10 +751,7 @@ func (p *OpenAIResponsesProvider) ChatWithState(
 	if err := json.NewDecoder(respBody).Decode(&result); err != nil {
 		return nil, state, fmt.Errorf("parse OpenAI Responses response failed: %w", err)
 	}
-	if result.Error != nil && result.Error.Message != "" {
-		return nil, state, fmt.Errorf("OpenAI Responses API error: %s", result.Error.Message)
-	}
-	if err := openAIResponsesIncompleteError(result); err != nil {
+	if err := openAIResponsesTerminalError(result); err != nil {
 		return nil, state, err
 	}
 	normalizedOutput, err := normalizeOpenAIResponsesOutputToolCallArguments(result.Output)
@@ -680,9 +798,10 @@ func (p *OpenAIResponsesProvider) ChatStreamWithState(
 			req.ImageFallbackPrompt,
 			req.ImageOmittedNotice,
 		)
+		previousInput := canonicalizeOpenAIResponsesFunctionCallsForInput(previous.Input)
 		body.Input = append(
-			cloneOpenAIResponsesRawItems(previous.Input),
-			marshalOpenAIResponsesInput(buildOpenAIResponsesInputWithToolCallIDs(requestMessages, p.baseURL, responsesSessionToolCallIDs(previous.Input)))...,
+			previousInput,
+			marshalOpenAIResponsesInput(buildOpenAIResponsesInputWithToolCallIDs(requestMessages, p.baseURL, responsesSessionToolCallIDs(previousInput)))...,
 		)
 	}
 	respBody, err := p.doRequest(ctx, body)
@@ -769,6 +888,9 @@ func (p *OpenAIResponsesProvider) ChatStreamWithState(
 			}
 			upsertToolCall(event.OutputIndex, item, "")
 		case "response.completed":
+			if err := openAIResponsesCompletedStreamEventError(event); err != nil {
+				return state, err
+			}
 			normalizedOutput, err := normalizeOpenAIResponsesOutputToolCallArguments(event.Response.Output)
 			if err != nil {
 				return state, err
