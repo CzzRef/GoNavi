@@ -8,6 +8,6 @@
 | --- | --- |
 | 01 | [01-260901-squash-供应商目录与CLI发现](../vibe/knowledge/upstream-pr/01-260901-squash-供应商目录与CLI发现.md) |
 | 02 | [02-260902-followup-设置页折叠与CLI续命](../vibe/knowledge/upstream-pr/02-260902-followup-设置页折叠与CLI续命.md) |
-| 03 | [03-260903-pending-编辑收缩展示](../vibe/knowledge/upstream-pr/03-260903-pending-编辑收缩展示.md) |
+| 03 | [03-260903-squash-编辑收缩展示](../vibe/knowledge/upstream-pr/03-260903-squash-编辑收缩展示.md) |
 
 退役说明 → [README.md](README.md)
