@@ -5,7 +5,7 @@ Date: 2026-09-03
 Status: `verified-r59`（2026-09-03 用户在 r59 核验包上确认通过）
 Product: GoNavi AI 设置 · 模型供应商
 Predecessor: [第十五轮认证字段默认纵向](../../260901/0000-ai-provider-management/task-card.md#第十五轮认证字段默认纵向) · [界面约定](../../../knowledge/ai-provider-ui-conventions.md)
-上游记录: [03-260903-pending-编辑收缩展示](../../../knowledge/upstream-pr/03-260903-pending-编辑收缩展示.md)
+上游记录: [03-260903-squash-编辑收缩展示](../../../knowledge/upstream-pr/03-260903-squash-编辑收缩展示.md)
 
 > 当前路径：`vibe/specs/260903/0000-provider-editor-compact/task-card.md`。旧 `czz-docs/260903-provider-editor-compact-task-card.md` 只是归档桩。
 
@@ -23,7 +23,7 @@ Predecessor: [第十五轮认证字段默认纵向](../../260901/0000-ai-provide
   "documents": [
     "vibe/specs/260903/0000-provider-editor-compact/task-card.md",
     "vibe/knowledge/ai-provider-ui-conventions.md",
-    "vibe/knowledge/upstream-pr/03-260903-pending-编辑收缩展示.md"
+    "vibe/knowledge/upstream-pr/03-260903-squash-编辑收缩展示.md"
   ],
   "dependencies": [
     "frontend/src/components/ai/AISettingsProvidersSection.tsx",
@@ -46,7 +46,7 @@ Predecessor: [第十五轮认证字段默认纵向](../../260901/0000-ai-provide
   "git_scope_prefixes": [
     "vibe/specs/260903/0000-provider-editor-compact/",
     "vibe/knowledge/ai-provider-ui-conventions.md",
-    "vibe/knowledge/upstream-pr/03-260903-pending-编辑收缩展示.md"
+    "vibe/knowledge/upstream-pr/03-260903-squash-编辑收缩展示.md"
   ]
 }
 ```
