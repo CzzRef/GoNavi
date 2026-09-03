@@ -5,7 +5,7 @@ GitHub: [#1134](https://github.com/Syngnat/GoNavi/pull/1134) MERGED
 Branch: `feat/ai-provider-ui-followup`（从当时最新 `upstream/dev` 另起，单提交）
 日期: 260902
 方式: followup
-过程稿: [供应商管理总卡 · 第十四轮](../../specs/260901/0000-ai-provider-management/task-card.md#第十四轮折叠栏箭头与顶栏间距)
+过程稿: [供应商管理总卡 · 第十四轮](../specs/260901/0000-ai-provider-management/task-card.md#第十四轮折叠栏箭头与顶栏间距)
 
 ## 1. 生命周期
 
@@ -88,8 +88,8 @@ Intentionally omitted: `czz-docs/`, verification screenshots, `.gitignore` / `pa
 
 ## 3. Skills 与规则
 
-- 折叠 caret、提示不截鼠标、目录最小宽写入 [ai-provider-ui-conventions.md](../ai-provider-ui-conventions.md)。
-- 核验停旧起新改为调用 Skill 脚本 `restart.sh`，见 [gonavi-verify-build-restart.md](../gonavi-verify-build-restart.md)。
+- 折叠 caret、提示不截鼠标、目录最小宽写入 [ai-provider-ui-conventions.md](../knowledge/ai-provider-ui-conventions.md)。
+- 核验停旧起新改为调用 Skill 脚本 `restart.sh`，见 [gonavi-verify-build-restart.md](../knowledge/gonavi-verify-build-restart.md)。
 - 全局 §3 清单本条基本齐；例程策略在 Risk 节显式声明不在本 PR。
 - 排除项仍含当时的 `czz-docs/`；现另排除 `vibe/`。
 

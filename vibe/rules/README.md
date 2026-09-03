@@ -20,7 +20,7 @@ Hosts: any
 - 过程枢纽：[PROJECT_STATUS.md](../specs/PROJECT_STATUS.md)
 - 任务索引：[../specs/README.md](../specs/README.md)
 - 可复用知识：[../knowledge/README.md](../knowledge/README.md)
-- 上游 PR 历史：[../knowledge/upstream-pr/README.md](../knowledge/upstream-pr/README.md)
+- 上游 PR 历史：[../pr/README.md](../pr/README.md)
 - 供应商界面约定：[../knowledge/ai-provider-ui-conventions.md](../knowledge/ai-provider-ui-conventions.md)
 - 核验通路：[../knowledge/gonavi-verify-build-restart.md](../knowledge/gonavi-verify-build-restart.md)
 - 项目 Skill：`gonavi-verify-build-restart`（CodeNote `Skills/projects/gonavi/`，本仓 `.agents/skills/` 与 `.claude/skills/` 为软链）
@@ -34,5 +34,5 @@ Hosts: any
 
 - 遵循全局 GitHub commit scope。
 - 当前任务目录之外的 `vibe/specs/<yyMMdd>/<HHmm-task-id>/` 默认快捷排除。
-- `czz-docs/` 里未点名的研究稿默认排除。
+- `czz-docs/` 仅退役 README，未点名则排除。
 - `vibe/specs/PROJECT_STATUS.md`、本目录 README、上游 PR 索引属于歧义 owner，不得只凭文件名排除。

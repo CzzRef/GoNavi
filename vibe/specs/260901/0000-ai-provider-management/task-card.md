@@ -1,6 +1,6 @@
 # 供应商展示与测试优化
 
-> 当前路径：`vibe/specs/260901/0000-ai-provider-management/task-card.md`。旧 `czz-docs/` 同名文件只是归档桩。上游 PR 史：[01](../../../knowledge/upstream-pr/01-260901-squash-供应商目录与CLI发现.md) · [02](../../../knowledge/upstream-pr/02-260902-followup-设置页折叠与CLI续命.md) · [03](../../../knowledge/upstream-pr/03-260903-squash-编辑收缩展示.md)。第十六轮细节在 [编辑收缩卡](../../260903/0000-provider-editor-compact/task-card.md)。
+> 当前路径：`vibe/specs/260901/0000-ai-provider-management/task-card.md`。旧 `czz-docs/` 同名文件已删除，入口见 [czz-docs/README.md](../../../../czz-docs/README.md)。上游 PR 史：[01](../../../pr/01-260901-squash-供应商目录与CLI发现.md) · [02](../../../pr/02-260902-followup-设置页折叠与CLI续命.md) · [03](../../../pr/03-260903-squash-编辑收缩展示.md)。第十六轮细节在 [编辑收缩卡](../../260903/0000-provider-editor-compact/task-card.md)。
 
 状态：正式页面已落实预览验收后的管理交互和隐藏目录。上游 [#1131](https://github.com/Syngnat/GoNavi/pull/1131) 已于 2026-09-01 合入 `dev`。2026-09-01 第十二轮合并上游 `dev` 并修掉窄屏遮罩、弹窗缩放与高度跳动；第十三轮把编辑页的提示、定位与操作入口整体收敛，并把本轮沉淀的操作与界面规则落成两份正文加一个 project Skill。第十四轮补上编辑页折叠栏箭头、顶栏间距、已隐藏底栏抽屉与提示不截鼠标，当时核验包为 r48；独立预览已按正式页当前源码重同步。2026-09-02 独立预览因单文件内联把 React 的 `$&` 展开而崩溃，已重建 `index.html`。页面短链是 `https://s.comeon365.com/fD3YJ82ww`；目录「最新」别名 `https://s.comeon365.com/fzGVLe__E` 曾被 README 抢走，已拨回 HTML。需硬刷新。合入后另有 CLI 流式与空闲续命。2026-09-03 认证字段改为默认纵向，保证 URL 与 API Key 看全；并排改为「收起编辑」左侧 ⓘ 内的可选布局。全量前端 5037 项中 5035 通过，两条失败分别为既有基线与上游自带。用户已在 r18 确认弹窗不再跳动，并在 r29/r30 逐项确认第十三轮的七项实机观感；余下未覆盖的仍是真实模型回复、Windows/Linux 实机与签名发布包。
 
@@ -125,7 +125,7 @@ r59 重建（2026-09-03）：合入最新 `upstream/dev`（`a70650b3`，含 [#11
 
 保存动作在同一轮合并为下拉按钮：保存是主按钮，另存为收进下拉；单例 CLI 预设直接不渲染下拉，因为它复用同一份本机登录，复制第二份没有意义。原本只在悬浮提示里出现的复制说明改为菜单项内的次级文案。
 
-上游 PR 的范围、排除项、测试口径与拆分障碍单独记在 [上游 PR 史](../../../knowledge/upstream-pr/README.md)。[#1131](https://github.com/Syngnat/GoNavi/pull/1131) 已合入 `dev`。跟进 [#1134](https://github.com/Syngnat/GoNavi/pull/1134) 只含设置页与 CLI 空闲续命；例程闸门已回滚，不进该 PR。
+上游 PR 的范围、排除项、测试口径与拆分障碍单独记在 [上游 PR 史](../../../pr/README.md)。[#1131](https://github.com/Syngnat/GoNavi/pull/1131) 已合入 `dev`。跟进 [#1134](https://github.com/Syngnat/GoNavi/pull/1134) 只含设置页与 CLI 空闲续命；例程闸门已回滚，不进该 PR。
 
 本轮沉淀出两份规则正文，改动供应商设置页前应先读：产物轮次、打包四键与停旧起新的操作口径在 [gonavi-verify-build-restart.md](../../../knowledge/gonavi-verify-build-restart.md)；悬浮提示、滚动定位、弹窗几何、破坏性操作、渲染性能、断点与命名等界面约定在 [ai-provider-ui-conventions.md](../../../knowledge/ai-provider-ui-conventions.md)。两者均不随上游 PR 提交。
 
@@ -228,9 +228,10 @@ Computer Use 在真实 r9 桌面发现：旧 Claude 配置将一个候选停用�
     "vibe/specs/260901/0000-ai-provider-management/task-card.md",
     "vibe/knowledge/ai-provider-ui-conventions.md",
     "vibe/knowledge/gonavi-verify-build-restart.md",
-    "vibe/knowledge/upstream-pr/README.md",
-    "vibe/knowledge/upstream-pr/01-260901-squash-供应商目录与CLI发现.md",
-    "vibe/knowledge/upstream-pr/02-260902-followup-设置页折叠与CLI续命.md"
+    "vibe/pr/README.md",
+    "vibe/pr/01-260901-squash-供应商目录与CLI发现.md",
+    "vibe/pr/02-260902-followup-设置页折叠与CLI续命.md",
+    "vibe/pr/03-260903-squash-编辑收缩展示.md"
   ],
   "dependencies": [
     "frontend/src/components/AISettingsModal.tsx",
@@ -278,7 +279,7 @@ Computer Use 在真实 r9 桌面发现：旧 Claude 配置将一个候选停用�
     "vibe/specs/260901/0000-ai-provider-management/",
     "vibe/knowledge/ai-provider-ui-conventions.md",
     "vibe/knowledge/gonavi-verify-build-restart.md",
-    "vibe/knowledge/upstream-pr/"
+    "vibe/pr/"
   ]
 }
 ```

@@ -7,15 +7,15 @@ GoNavi 过程枢纽。不复制 CodeNote 内核。
 
 ## 当前主线
 
-1. **供应商设置页第十六轮（编辑收缩）** — r59 实机已通过；上游 [#1155](https://github.com/Syngnat/GoNavi/pull/1155) 已开（压平分支 `feat/ai-provider-editor-compact`，不是 `czz-dev`）。过程 owner：[0000-provider-editor-compact/task-card.md](260903/0000-provider-editor-compact/task-card.md)。节奏记录：[03-260903-squash-编辑收缩展示](../knowledge/upstream-pr/03-260903-squash-编辑收缩展示.md)。
-2. **文档落点迁入 vibe** — 本轮需求：[1957-pr-docs-vibe-init/spec.md](260903/1957-pr-docs-vibe-init/spec.md)。task card 与 PR 范围不再以 `czz-docs/` 为当前权威。
+1. **供应商设置页第十六轮（编辑收缩）** — r59 实机已通过；上游 [#1155](https://github.com/Syngnat/GoNavi/pull/1155) 已开（压平分支 `feat/ai-provider-editor-compact`，不是 `czz-dev`）。Windows CI 的 Claude CLI 流超时用例已按 helper process 跟进，等 `windows-latest` 再绿。过程 owner：[0000-provider-editor-compact/task-card.md](260903/0000-provider-editor-compact/task-card.md)。节奏记录：[03-260903-squash-编辑收缩展示](../pr/03-260903-squash-编辑收缩展示.md)。
+2. **文档落点迁入 vibe** — 需求：[1957-pr-docs-vibe-init/spec.md](260903/1957-pr-docs-vibe-init/spec.md)。PR 史在 [../pr/](../pr/README.md)；MCP 研究稿在 [../knowledge/mcp-agent/](../knowledge/mcp-agent/README.md)；`czz-docs/` 仅退役 README。
 
 ## 已合入上游
 
 | 序号 | 记录 | GitHub |
 | --- | --- | --- |
-| 01 | [01-260901-squash-供应商目录与CLI发现](../knowledge/upstream-pr/01-260901-squash-供应商目录与CLI发现.md) | [#1131](https://github.com/Syngnat/GoNavi/pull/1131) MERGED；[#1130](https://github.com/Syngnat/GoNavi/pull/1130) CLOSED |
-| 02 | [02-260902-followup-设置页折叠与CLI续命](../knowledge/upstream-pr/02-260902-followup-设置页折叠与CLI续命.md) | [#1134](https://github.com/Syngnat/GoNavi/pull/1134) MERGED |
+| 01 | [01-260901-squash-供应商目录与CLI发现](../pr/01-260901-squash-供应商目录与CLI发现.md) | [#1131](https://github.com/Syngnat/GoNavi/pull/1131) MERGED；[#1130](https://github.com/Syngnat/GoNavi/pull/1130) CLOSED |
+| 02 | [02-260902-followup-设置页折叠与CLI续命](../pr/02-260902-followup-设置页折叠与CLI续命.md) | [#1134](https://github.com/Syngnat/GoNavi/pull/1134) MERGED |
 
 ## 未验 / 未开
 
@@ -27,5 +27,5 @@ GoNavi 过程枢纽。不复制 CodeNote 内核。
 
 - 项目规则：[../rules/README.md](../rules/README.md)
 - 知识：[../knowledge/README.md](../knowledge/README.md)
-- 上游 PR 索引：[../knowledge/upstream-pr/README.md](../knowledge/upstream-pr/README.md)
+- 上游 PR 索引：[../pr/README.md](../pr/README.md)
 - 退役 `czz-docs`：[../../czz-docs/README.md](../../czz-docs/README.md)
