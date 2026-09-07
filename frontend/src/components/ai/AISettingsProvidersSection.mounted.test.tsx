@@ -188,6 +188,7 @@ describe('provider settings mounted controls', () => {
     expect(renderedText(renderer!.toJSON())).toContain('Featured sponsors');
     expect(renderedText(renderer!.toJSON())).toContain('No sponsors yet');
     expect(presetSelect().props.classNames.popup.root).toBe('gonavi-ai-provider-preset-dropdown');
+    expect(presetSelect().props.popupMatchSelectWidth).toBe(false);
   });
 
   it('blocks a stale new CLI draft after another record has been added', async () => {

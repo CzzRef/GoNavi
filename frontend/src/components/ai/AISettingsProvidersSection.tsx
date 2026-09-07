@@ -382,7 +382,7 @@ const AISettingsProvidersSection: React.FC<AISettingsProvidersSectionProps> = ({
     <div className="gonavi-ai-provider-editor is-list-edit">
       {!editorReady ? <div className="gonavi-ai-provider-editor-empty">{copy('ai_settings.provider.choose_configuration')}</div>
         : <Form form={form} layout="horizontal" labelAlign="right" size="small" colon={false}
-          labelCol={{ flex: '7.5em' }} wrapperCol={{ flex: 1 }}
+          labelCol={{ flex: '0 0 12em' }} wrapperCol={{ flex: '1 1 0%' }}
           onValuesChange={onValuesChange} className="gonavi-ai-provider-form">
           <div className="gonavi-ai-provider-editor-heading is-edit-nav">
             <Button type="text" size="small" icon={<LeftOutlined />} onClick={onCancelEdit}>{copy('ai_settings.action.back_list')}</Button>
@@ -431,7 +431,7 @@ const AISettingsProvidersSection: React.FC<AISettingsProvidersSectionProps> = ({
               />
             </Form.Item>}
             {showAuthMethod && <Form.Item label={fieldLabel('ai_settings.form.auth_method')} name="authMode">
-              <Select size="middle" options={[
+              <Select size="middle" popupMatchSelectWidth={false} classNames={{ popup: { root: 'gonavi-ai-provider-form-popup' } }} options={[
                 { value: 'api-key', label: copy('ai_settings.form.auth_api_key') },
                 { value: 'bearer', label: copy('ai_settings.form.auth_bearer') },
               ]} />
@@ -444,7 +444,8 @@ const AISettingsProvidersSection: React.FC<AISettingsProvidersSectionProps> = ({
             </Form.Item>}
             {!usesLocalCLI && <Form.Item className="gonavi-ai-provider-field-url" label={fieldLabel('ai_settings.form.api_endpoint')} name="baseUrl"
               rules={codeBuddyUsesOptionalSecret ? [] : [{ required: true, message: copy('ai_settings.form.api_endpoint_required') }]}>
-              {endpointOptions.length > 0 ? <Select showSearch optionFilterProp="label" size="middle"
+              {endpointOptions.length > 0 ? <Select showSearch optionFilterProp="label" size="middle" popupMatchSelectWidth={false}
+                classNames={{ popup: { root: 'gonavi-ai-provider-form-popup' } }}
                 options={endpointOptions.map((endpoint) => ({ label: endpoint.baseUrl, value: endpoint.baseUrl }))}
                 onChange={(baseUrl) => { const endpoint = endpointOptions.find((item) => item.baseUrl === baseUrl); if (endpoint) form.setFieldValue('type', endpoint.backendType); }} />
                 : <Input size="middle" readOnly={!supportsAdvancedEndpoint} placeholder={codeBuddyUsesOptionalSecret ? copy('ai_settings.form.api_endpoint_placeholder.codebuddy') : presetFromForm?.defaultBaseUrl || 'https://...'} suffix={<LinkOutlined />} />}
@@ -463,6 +464,7 @@ const AISettingsProvidersSection: React.FC<AISettingsProvidersSectionProps> = ({
                 ? <Input className="gonavi-ai-provider-fixed-value" size="middle" readOnly tabIndex={-1} aria-label={copy('ai_settings.form.api_format')}
                   value={endpointLabel(getProviderEndpointTypes(presetFromForm!)[0] || selectedEndpointType)} />
                 : <Select className="gonavi-ai-provider-endpoint-select" aria-label={copy('ai_settings.form.api_format')} size="middle"
+                  popupMatchSelectWidth={false} classNames={{ popup: { root: 'gonavi-ai-provider-form-popup' } }}
                   value={selectedEndpointType} disabled={loading} options={getProviderEndpointTypes(presetFromForm!).map((endpoint) => ({ value: endpoint, label: endpointLabel(endpoint) }))}
                   onChange={(endpoint) => onPresetChange(presetKeyFromForm, endpoint)} />}
             </Form.Item>}
@@ -508,6 +510,7 @@ const AISettingsProvidersSection: React.FC<AISettingsProvidersSectionProps> = ({
             </Form.Item>}
             {usesLocalCLI && <Form.Item label={fieldLabel('ai_settings.form.effort')} name="effort">
               {activeCLICapability?.supportsEffort ? <Select allowClear size="middle" placeholder={copy('ai_settings.form.effort_placeholder_empty')}
+                popupMatchSelectWidth={false} classNames={{ popup: { root: 'gonavi-ai-provider-form-popup' } }}
                 options={(activeCLICapability.effortValues || []).map((value) => ({ label: value, value }))} />
                 : <Input size="middle" disabled placeholder={copy(activeCLICapability?.supportsEffort === false ? 'ai_settings.form.effort_unsupported' : 'ai_settings.form.effort_placeholder_empty')} />}
             </Form.Item>}
@@ -520,6 +523,7 @@ const AISettingsProvidersSection: React.FC<AISettingsProvidersSectionProps> = ({
               />
               <div className="gonavi-ai-provider-field-grid">
                 {supportsModelList && <Form.Item label={fieldLabel('ai_settings.form.favorite_models')} name="models"><Select mode="tags" size="middle"
+                  popupMatchSelectWidth={false} classNames={{ popup: { root: 'gonavi-ai-provider-form-popup' } }}
                   maxTagCount="responsive" tokenSeparators={[',']} placeholder={copy('ai_settings.form.model_list_placeholder.local_cli')}
                   options={enabledModelOptions} /></Form.Item>}
                 <Form.Item label={fieldLabel('ai_settings.form.inline_completion_model')} name="inlineCompletionModel" rules={[requiredModelRule]}>

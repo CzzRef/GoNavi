@@ -40,17 +40,17 @@ Predecessor: [供应商编辑收缩](../../260903/0000-provider-editor-compact/t
     "frontend/src/App.tool-center.test.ts"
   ],
   "git_scope_prefixes": [
-    "vibe/specs/260907/1616-dbx-provider-parity/",
+    "vibe/specs/260907/1616-dbx-provider-parity",
     "vibe/knowledge/ai-provider-ui-conventions.md",
     "vibe/specs/PROJECT_STATUS.md",
-    "frontend/src/components/ai/",
+    "frontend/src/components/ai",
     "frontend/src/components/AISettingsModal.tsx",
-    "frontend/public/icons/ai/",
+    "frontend/public/icons/ai",
     "frontend/src/types.ts",
-    "frontend/src/utils/",
+    "frontend/src/utils",
     "frontend/wailsjs/go/models.ts",
-    "internal/ai/",
-    "shared/i18n/"
+    "internal/ai",
+    "shared/i18n"
   ]
 }
 ```
@@ -67,7 +67,7 @@ Predecessor: [供应商编辑收缩](../../260903/0000-provider-editor-compact/t
       "base_sha": "9f463ba67c4ca820b6a1f2a925f09329d3af845e",
       "worktree_branch": "codex/260907-dbx-provider-parity",
       "task_owner": "vibe/specs/260907/1616-dbx-provider-parity/task-card.md",
-      "head": "9f463ba67c4ca820b6a1f2a925f09329d3af845e",
+      "head": "65dfbe418a655ed568bdfa71681d6469a273c0fb",
       "upstream": null
     }
   ],
@@ -76,7 +76,7 @@ Predecessor: [供应商编辑收缩](../../260903/0000-provider-editor-compact/t
   "verification_state": "planned",
   "push_state": "not-authorized",
   "integration_state": "not-started",
-  "next_action": "await on-device r61 confirmation of list-edit, brand select, and flattened form"
+  "next_action": "commit dropdown-width fix then merge child into czz-dev"
 }
 ```
 
@@ -88,8 +88,8 @@ P0：列表/表单交互、品牌图标下拉（合作方空列）、拍平字�
 
 ## 核验
 
-离线（child worktree `codex/260907-dbx-provider-parity`，HEAD `fef06cf4` 之上未提交实现）：`npx tsc --noEmit` 退出码 0；相关 vitest 109/109；全量 vitest 5319 通过 / 29 失败（DataGrid / DriverManager / Snippet / 主题预设，与原目录同批基线，非本轮引入）；`go test ./internal/ai/provider ./internal/ai/service` 通过；`go build ./internal/... ./cmd/...` 通过。
+离线（child `codex/260907-dbx-provider-parity`，实现提交 `65dfbe41` 之上宽度修复未提交）：相关 vitest 26/26（列表/表单/品牌下拉）。编译与离线测试不构成实机通过。
 
-r61 核验包：`build/bin/GoNavi-provider-settings-260907-r61`（68766338 字节，SHA-256 `807ff80dc954029485843967ac6f990c2ccc95ada96eea7711ecb6d082631bc5`），壳 `GoNavi-Provider-Verification-r61.app`，pid 65421 单实例。identifier `com.czz.gonavi.provider-verification.r61`（换 identifier 会清 WebView 布局偏好）。编译与离线测试不构成实机通过。
+核验包在原目录 `build/bin/`：r61 首版 list/edit；r62 标签/列表名宽、下拉仍跟控件拉齐；r63 `GoNavi-provider-settings-260907-r63`（68766338 字节，SHA-256 `8d80a380c37ed59f6a1cb410ee37bcd08a16ef097a8502455366f112a642d567`），壳 `GoNavi-Provider-Verification-r63.app`，identifier `com.czz.gonavi.provider-verification.r63`。提供商下拉改为按内容定宽，右列空占位 9rem。
 
-实机待确认：设置中心 → AI 配置列表 → 新增 → 品牌下拉两列滚动 → 测试/应用 → 返回。核验包在原目录 `build/bin/`（对照/验收面）；实现在 child worktree。
+实机待确认：设置中心 → AI 配置列表 → 新增 → 提供商下拉不再撑满、右列不再空一大块 → 测试/应用 → 返回。

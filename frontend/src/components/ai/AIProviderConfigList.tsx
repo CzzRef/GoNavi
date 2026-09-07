@@ -61,7 +61,7 @@ const AIProviderConfigList: React.FC<AIProviderConfigListProps> = ({
             <AIProviderLogo presetKey={item.presetKey} label={item.presetLabel} dark={dark} />
             <div>
               <div className="gonavi-ai-provider-config-card-title">
-                <span className="gonavi-ai-provider-name">{item.name}</span>
+                <span className="gonavi-ai-provider-config-card-name">{item.name}</span>
                 {item.isDefault && <span className="gonavi-ai-provider-current">{defaultLabel}</span>}
               </div>
               <div className="gonavi-ai-provider-config-card-preset">{item.presetLabel}</div>

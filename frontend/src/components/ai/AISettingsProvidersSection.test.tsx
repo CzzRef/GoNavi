@@ -102,6 +102,7 @@ describe('AISettingsProvidersSection', () => {
     expect(markup).toContain('AI configurations');
     expect(markup).toContain('Add configuration');
     expect(markup).toContain('gonavi-ai-provider-config-card is-default');
+    expect(markup).toContain('gonavi-ai-provider-config-card-name');
     expect(markup).toContain('Default');
     expect(markup).not.toContain('gonavi-ai-provider-chips');
     expect(markup).not.toContain('Provider catalog');
@@ -133,6 +134,8 @@ describe('AISettingsProvidersSection', () => {
     expect(markup).toContain('Apply');
     expect(markup).toContain('Back');
     expect(markup).toContain('ant-form-horizontal');
+    expect(markup).toContain('0 0 12em');
+    expect(markup).toContain('1 1 0%');
     expect(markup).not.toContain('gonavi-ai-provider-connection-fields is-inline');
     expect(markup).not.toContain('Connection field layout');
   });

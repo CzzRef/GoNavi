@@ -10,7 +10,8 @@
 
 - 列表：标题「AI 配置列表」+「新增配置」；空态虚线框；卡片含品牌图标、名称、提供商、默认徽章、设为默认 / 编辑 / 删除（删除仍 `Popconfirm`）。
 - 编辑：左「返回」，标题「新增配置 / 编辑配置」；antd `layout="horizontal"` 左标签；页脚左测试、右取消/应用。多实例 API 的「另存为」仍挂在应用按钮下拉；单例 CLI 不出现另存为。
-- 提供商 Select 在表单内：触发器含品牌图标；下拉约 32rem、两列。左列「内置支持」= 现有 `PROVIDER_PRESETS`；右列「优质赞助商」空占位，不接 Jalapeño/HuaLong。
+- 提供商 Select 在表单内：触发器含品牌图标。下拉按内容定宽（不跟表单控件拉齐）；左列「内置支持」约 18–22rem，右列「优质赞助商」空占位固定 9rem。同页其它候选项下拉同样按内容宽，不接 Jalapeño/HuaLong。
+- 左标签列 `flex: 0 0 12em`，控件吃剩余宽度；列表卡名称随卡片剩余宽度省略，不锁 190px。
 - `ai-providers-connected` 只进入同一列表，不单独渲染芯片；树 key 保留。
 - Tooltip / `revealFirstErrorIn` / 禁止 `scrollIntoView` / 单格式只读 Input 仍有效。
 - 目录拖拽、隐藏抽屉、认证三字段并排压缩（`connectionLayout`）对本页是非目标，不再作为默认交互。
