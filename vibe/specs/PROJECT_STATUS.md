@@ -1,14 +1,15 @@
 # PROJECT_STATUS
 
 Tool: grok
-Updated: 2026-09-03
+Updated: 2026-09-07
 
 GoNavi 过程枢纽。不复制 CodeNote 内核。
 
 ## 当前主线
 
-1. **供应商设置页第十六轮（编辑收缩）** — r59 实机已通过；上游 [#1155](https://github.com/Syngnat/GoNavi/pull/1155) 已开（压平分支 `feat/ai-provider-editor-compact`，不是 `czz-dev`）。Windows CI 的 Claude CLI 流超时用例已按 helper process 跟进，等 `windows-latest` 再绿。过程 owner：[0000-provider-editor-compact/task-card.md](260903/0000-provider-editor-compact/task-card.md)。节奏记录：[03-260903-squash-编辑收缩展示](../pr/03-260903-squash-编辑收缩展示.md)。
-2. **文档落点迁入 vibe** — 需求：[1957-pr-docs-vibe-init/spec.md](260903/1957-pr-docs-vibe-init/spec.md)。PR 史在 [../pr/](../pr/README.md)；MCP 研究稿在 [../knowledge/mcp-agent/](../knowledge/mcp-agent/README.md)；`czz-docs/` 仅退役 README。
+1. **DBX 供应商交互复现** — 设置中心 `ai-providers` 改为 list/edit、品牌图标下拉（合作方空列）、拍平字段。过程 owner：[1616-dbx-provider-parity/task-card.md](260907/1616-dbx-provider-parity/task-card.md)。实现在 child `codex/260907-dbx-provider-parity`；原目录只做对照与验收。
+2. **供应商设置页第十六轮（编辑收缩）** — r59 实机已通过；上游 [#1155](https://github.com/Syngnat/GoNavi/pull/1155) 已开（压平分支 `feat/ai-provider-editor-compact`，不是 `czz-dev`）。该页主交互已被上一行替换；紧凑并排降为非目标。
+3. **文档落点迁入 vibe** — 需求：[1957-pr-docs-vibe-init/spec.md](260903/1957-pr-docs-vibe-init/spec.md)。PR 史在 [../pr/](../pr/README.md)；MCP 研究稿在 [../knowledge/mcp-agent/](../knowledge/mcp-agent/README.md)；`czz-docs/` 仅退役 README。
 
 ## 已合入上游
 

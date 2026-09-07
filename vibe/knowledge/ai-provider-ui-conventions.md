@@ -4,6 +4,17 @@
 
 产物与轮次的操作口径在 [gonavi-verify-build-restart.md](gonavi-verify-build-restart.md)。
 
+## 0. 本页主交互（2026-09-07）
+
+设置中心 `ai-providers` 详情使用 **list | edit**，对照 DBX 设置 → AI，不再以目录卡片、顶栏添加 Select 或已接入芯片条作为主路径。
+
+- 列表：标题「AI 配置列表」+「新增配置」；空态虚线框；卡片含品牌图标、名称、提供商、默认徽章、设为默认 / 编辑 / 删除（删除仍 `Popconfirm`）。
+- 编辑：左「返回」，标题「新增配置 / 编辑配置」；antd `layout="horizontal"` 左标签；页脚左测试、右取消/应用。多实例 API 的「另存为」仍挂在应用按钮下拉；单例 CLI 不出现另存为。
+- 提供商 Select 在表单内：触发器含品牌图标；下拉约 32rem、两列。左列「内置支持」= 现有 `PROVIDER_PRESETS`；右列「优质赞助商」空占位，不接 Jalapeño/HuaLong。
+- `ai-providers-connected` 只进入同一列表，不单独渲染芯片；树 key 保留。
+- Tooltip / `revealFirstErrorIn` / 禁止 `scrollIntoView` / 单格式只读 Input 仍有效。
+- 目录拖拽、隐藏抽屉、认证三字段并排压缩（`connectionLayout`）对本页是非目标，不再作为默认交互。
+
 ## A. 悬浮提示
 
 - **不使用原生 `title`。** 系统气泡约一秒才出、指针一移开就消失，且无法配置。需要提示时用 antd `Tooltip`。
@@ -51,10 +62,10 @@
 - 抽屉态要铺满工作区，否则遮罩会在旁边裸露成灰板；抽屉外壳不透明度不足时，要显式隐藏底层内容，避免文字透出。
 - 工作区之上的都是固定占位，每削减一像素编辑区就多一像素。固定高度的列表区（如已接入列表）用 `min(px, vh)` 而不是纯像素，避免条目变多时挤压编辑区。
 - 顶栏说明与添加框、已接入工具条（密度/搜索）对齐预览稿的水平分组，间距只做小幅回放（约 +4–6px），不要把第十一轮的压缩整段撤掉。
-- **认证三字段默认单列。** URL 与 API Key 必须能看全，不要再用 730px 容器查询强制三列。并排是标题 ⓘ 里的可选布局：失焦时 URL 去 `https://` 并 `...` 头尾压缩、Key 只留头尾 4 位，所以一行只需容纳压缩后的文字——格式约 140px、URL 约 200px、Key 约 150px 起排（编辑区约 520px 即可三项同排），不够才换行；比压缩文字还窄时失焦输入框用省略号而不是裁切。点进输入框仍编辑全文。选择写入 `gonavi.ai.providers.layout.v1` 的 `connectionLayout`。
+- **认证三字段并排对本页是非目标。** 供应商编辑改为 DBX 式单列左标签；`connectionLayout` 不再作为本页默认开关。历史说明见过程卡 [0000-provider-editor-compact](../specs/260903/0000-provider-editor-compact/task-card.md)。
 - **单选项不要下拉。** API 格式只有一种时仍保留输入框边框（antd `Input` `readOnly`，`gonavi-ai-provider-fixed-value`）与 URL、Key 对齐，文字用 `--provider-muted` 浅灰，不出现 Select 箭头、不可编辑、不进 Tab 序。
 - **CLI 模型列表按格式缓存。** `AIGetCLIModelCatalog` 会真的拉起本机 CLI，进入编辑或重开设置页不重复调用：可用结果按 `apiFormat` 写进 `gonavi.ai.providers.modelCatalog.v1`（`cliModelCatalogCache.ts`），下次直接沿用；只有点 `n/m 已启用` 才强制重拉。`stale`、空列表、失败不入缓存，下次自动重试。
-- **目录与已隐藏列表可拖拽排序。** 顺序存 `layout.v1` 的 `presetOrder`（只存 key，新增预设按默认顺序补在已知项之后）。用 `@dnd-kit` 指针传感器（6px 起拖，点击不受影响），`rectSortingStrategy` 覆盖多列网格；拖动时原卡片留在流里变成虚化虚线占位并提前滑到落点，指针下是浮起的副本（`DragOverlay`）。搜索过滤中不允许拖（子序列的落点无法映射到全序）。两组共用一份全序，隐藏列表内部拖动只交换隐藏项的槽位，可见项位置不动。
+- **目录与已隐藏列表可拖拽排序不是本页主路径。** 主交互改为配置列表/编辑表单；预设顺序偏好仍可存在于 `layout.v1`，但供应商页不再渲染目录网格。
 - **拖拽副本必须 portal 到 `<body>`。** 设置页弹窗带 `transform`，`position: fixed` 的副本若留在弹窗树内会以弹窗为参照、落后鼠标一个偏移量。`zIndex 1060`，主题变量用 `overlayStyle` 传过去；副本贴抓取点、微倾 + 阴影 + 半透明、`pointer-events: none`。可拖拽面悬浮 `cursor: grab`，拖动中由 `body.gonavi-ai-provider-dragging` 强制 `grabbing`；眼睛 / 恢复按钮保持 pointer。
 - **模型启用反馈落在该行。** 「已停用 / 已启用 / 先换默认 / 已添加」都是该行开关旁 1.6 秒的小浮窗（`MODEL_ROW_FLASH_MS`），不在弹层底部放共享说明行；`role=status` 只保留为视觉隐藏的 live region。停用行整行置灰。
 - **空的 CLI 折叠不要留。** 本机 CLI 没有认证字段时，不渲染「本机 CLI」`<details>`；ⓘ 挂到正在编辑的已接入芯片右上角。「已接入 CLI 无需重复添加」只在编辑已保存的 CLI 时出现在目录工具条原位。
