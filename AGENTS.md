@@ -1,9 +1,10 @@
-# GoNavi
+<!-- codenote-agent-ecosystem:start -->
+# gonavi AI entry
 
-本文件只做仓库入口，不复述 CodeNote 规则正文。共享内核由宿主全局指令加载；本仓库自己的路由在 [vibe/rules/README.md](vibe/rules/README.md)。
+Source: CodeNote compact core sha256:935bd00f7f626c43a5accac9a71618af64ea59d8561b443a4f6838f43af7fdbe.
 
-- 过程枢纽：[vibe/specs/PROJECT_STATUS.md](vibe/specs/PROJECT_STATUS.md)
-- 任务索引：[vibe/specs/README.md](vibe/specs/README.md)
-- 上游 PR 历史：[vibe/pr/README.md](vibe/pr/README.md)
+If ../../CzzProj/CodeNote/AiRef/VibePractice/Vibe_Rules/VibeAi.md exists, load that core, its short routing/README.md and the applicable short host adapter once; apply both baseline guards selected by that router. Otherwise load [vibe/rules/global-core.generated.md](vibe/rules/global-core.generated.md); it is a deterministic portable projection. Reuse unchanged context during the task.
 
-`czz-docs/` 只留退役 README。当前权威只走 `vibe/`。
+Load [project rules](vibe/rules/README.md). Detailed project procedures are conditional on the affected code, UI, data or runtime surface. Routine replies use concise numbered points; omit empty modules. Other tool entries route to this file.
+<!-- projection-sha256: ca0c6013c3f38d38f3895b23d25ad8b761ab90bc8006b6550aaf280e7bd1b17d -->
+<!-- codenote-agent-ecosystem:end -->

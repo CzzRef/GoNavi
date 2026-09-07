@@ -1,38 +1,15 @@
-# GoNavi 项目入口
+# gonavi project rules
 
-Tool: tool-neutral
-Hosts: any
+<!-- codenote-project-router:v1 -->
 
-本目录只维护本仓库特化路由。共享 primary / additive / evidence 由宿主已加载的 CodeNote Rule Kernel 选择；这里不复制算法。
+## Project gates and routes
 
-本仓库**没有** `intent-note-gate`。
+For code, UI, data, build, deployment or runtime work, read the relevant [local context](local-context.md) and its linked owner before acting. It retains this project's SQL, environment, browser identity, preview and real-acceptance constraints. Commands do not grant permission to start services or mutate data. Simple questions need no process preflight.
 
-## Required Reads
+- code and business constraints: [project.md](project.md).
+- commands and verification: [workflow.md](workflow.md).
+- durable documentation or recovery: [documentation.md](documentation.md).
+- continuation or current acceptance: [vibe/specs/PROJECT_STATUS.md](../specs/PROJECT_STATUS.md).
+- reusable project knowledge: [vibe/knowledge/README.md](../knowledge/README.md).
 
-1. 宿主已注入的 CodeNote 内核（新任务一次）
-2. [documentation.md](documentation.md)（Standard / Controlled、文档治理、task card 位置）
-3. [PROJECT_STATUS.md](../specs/PROJECT_STATUS.md)（进行中的供应商 UI / 上游 PR）
-4. [project.md](project.md)（SQL 判定、三执行面、fork 与上游 PR 边界）
-5. [workflow.md](workflow.md)（核验包、测试命令）
-
-## Project Routes
-
-- 过程枢纽：[PROJECT_STATUS.md](../specs/PROJECT_STATUS.md)
-- 任务索引：[../specs/README.md](../specs/README.md)
-- 可复用知识：[../knowledge/README.md](../knowledge/README.md)
-- 上游 PR 历史：[../pr/README.md](../pr/README.md)
-- 供应商界面约定：[../knowledge/ai-provider-ui-conventions.md](../knowledge/ai-provider-ui-conventions.md)
-- 核验通路：[../knowledge/gonavi-verify-build-restart.md](../knowledge/gonavi-verify-build-restart.md)
-- 项目 Skill：`gonavi-verify-build-restart`（CodeNote `Skills/projects/gonavi/`，本仓 `.agents/skills/` 与 `.claude/skills/` 为软链）
-
-## Hard Gates
-
-- 见 [project.md](project.md)。不要为 GoNavi 建空的 `vibe/ai-db/`。
-- `vibe/` 与 `czz-docs/` 不进上游 `Syngnat/GoNavi` 的 PR。
-
-## Git 快捷排除
-
-- 遵循全局 GitHub commit scope。
-- 当前任务目录之外的 `vibe/specs/<yyMMdd>/<HHmm-task-id>/` 默认快捷排除。
-- `czz-docs/` 仅退役 README，未点名则排除。
-- `vibe/specs/PROJECT_STATUS.md`、本目录 README、上游 PR 索引属于歧义 owner，不得只凭文件名排除。
+Keep this index and local-context.md project-owned. Generated host entries and global-core.generated.md are updated from CodeNote; do not hand-maintain copies of global procedures.
