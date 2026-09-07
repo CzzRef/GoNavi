@@ -17,7 +17,8 @@
 | --- | --- | --- | --- | --- |
 | 01 | [01-260901-squash-供应商目录与CLI发现](01-260901-squash-供应商目录与CLI发现.md) | MERGED | [#1131](https://github.com/Syngnat/GoNavi/pull/1131)（[#1130](https://github.com/Syngnat/GoNavi/pull/1130) CLOSED） | [供应商管理总卡](../specs/260901/0000-ai-provider-management/task-card.md) |
 | 02 | [02-260902-followup-设置页折叠与CLI续命](02-260902-followup-设置页折叠与CLI续命.md) | MERGED | [#1134](https://github.com/Syngnat/GoNavi/pull/1134) | 同上总卡第十四轮 |
-| 03 | [03-260903-squash-编辑收缩展示](03-260903-squash-编辑收缩展示.md) | opened | [#1155](https://github.com/Syngnat/GoNavi/pull/1155) | [编辑收缩卡](../specs/260903/0000-provider-editor-compact/task-card.md) |
+| 03 | [03-260903-squash-编辑收缩展示](03-260903-squash-编辑收缩展示.md) | MERGED | [#1155](https://github.com/Syngnat/GoNavi/pull/1155) | [编辑收缩卡](../specs/260903/0000-provider-editor-compact/task-card.md) |
+| 04 | [04-260907-squash-供应商list-edit](04-260907-squash-供应商list-edit.md) | opened | [#1178](https://github.com/Syngnat/GoNavi/pull/1178) | [DBX 供应商交互复现](../specs/260907/1616-dbx-provider-parity/task-card.md) |
 
 ## 对上游的永久排除
 
