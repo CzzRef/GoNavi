@@ -67,16 +67,16 @@ Predecessor: [供应商编辑收缩](../../260903/0000-provider-editor-compact/t
       "base_sha": "9f463ba67c4ca820b6a1f2a925f09329d3af845e",
       "worktree_branch": "codex/260907-dbx-provider-parity",
       "task_owner": "vibe/specs/260907/1616-dbx-provider-parity/task-card.md",
-      "head": "65dfbe418a655ed568bdfa71681d6469a273c0fb",
+      "head": "581354f526a2cffa0445e65c51f3189a410ca424",
       "upstream": null
     }
   ],
   "commit_mode": "verified-milestone",
   "push_mode": "current-message-only",
-  "verification_state": "planned",
+  "verification_state": "verified-commit",
   "push_state": "not-authorized",
-  "integration_state": "not-started",
-  "next_action": "commit dropdown-width fix then merge child into czz-dev"
+  "integration_state": "integrated",
+  "next_action": "choose cleanup, park, or continue; r63 on-device still unconfirmed"
 }
 ```
 
