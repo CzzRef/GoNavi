@@ -101,7 +101,7 @@ export const applyNativeDetachedDocumentAppearance = (
   );
   const rootStyle = documentRef.documentElement?.style;
   documentRef.body.setAttribute('data-theme', resolvedTheme);
-  documentRef.body.setAttribute('data-ui-version', uiVersion);
+  documentRef.body.setAttribute('data-ui-version', 'v2');
   documentRef.body.setAttribute('data-gonavi-detached', 'true');
   documentRef.body.style.backgroundColor = 'transparent';
   documentRef.body.style.color = resolvedTheme === 'dark' ? '#ffffff' : '#000000';
@@ -299,7 +299,7 @@ const NativeDetachedQueryResult: React.FC<{
             readOnly
             connectionId={result.executionConnectionId || windowState.connectionId}
             connectionParamsOverride={result.executionConnectionParams}
-            dbName={result.metadataDbName || result.executionDbName || windowState.dbName || ''}
+            dbName={result.metadataDbName ?? result.executionDbName ?? windowState.dbName ?? ''}
             resultSql={result.sql}
             exportScope="queryResult"
             isActive
@@ -335,7 +335,7 @@ const NativeDetachedQueryResult: React.FC<{
       readOnly={result.readOnly !== false}
       connectionId={result.executionConnectionId || windowState.connectionId}
       connectionParamsOverride={result.executionConnectionParams}
-      dbName={result.metadataDbName || result.executionDbName || windowState.dbName || ''}
+      dbName={result.metadataDbName ?? result.executionDbName ?? windowState.dbName ?? ''}
       ddlDbName={result.ddlDbName}
       ddlTableName={result.ddlTableName}
       resultSql={result.exportSql || result.sql}
@@ -378,7 +378,14 @@ const NativeDetachedWindowContent: React.FC<{
 
   if (bootstrap.kind === 'workbench') {
     return tab
-      ? <WorkbenchTabContent tab={tab} isActive onContentReady={onContentReady} />
+      ? (
+          <WorkbenchTabContent
+            tab={tab}
+            isActive
+            onContentReady={onContentReady}
+            onRequestClose={onClose}
+          />
+        )
       : null;
   }
   if (bootstrap.kind === 'query-result') {
@@ -652,6 +659,8 @@ const NativeDetachedWindowApp: React.FC<NativeDetachedWindowAppProps> = ({
         ]
       : [
           'gonavi:ai:inject-prompt',
+          'gonavi:open-download-source-settings',
+          'gonavi:open-global-proxy-settings',
           ...(bootstrap.kind === 'workbench' ? ['gonavi:locate-sidebar-object' as const] : []),
         ];
     const forwardToHost = (event: Event) => {
@@ -726,7 +735,7 @@ const NativeDetachedWindowApp: React.FC<NativeDetachedWindowAppProps> = ({
   useEffect(() => {
     if (typeof document === 'undefined') return;
     document.body.setAttribute('data-theme', effectiveThemeMode === 'dark' ? 'dark' : 'light');
-    document.body.setAttribute('data-ui-version', uiVersion);
+    document.body.setAttribute('data-ui-version', 'v2');
     document.body.style.color = effectiveThemeMode === 'dark' ? '#ffffff' : '#111827';
     document.body.style.fontSize = `${Math.max(10, Number(fontSize) || 14)}px`;
     document.documentElement.style.colorScheme = effectiveThemeMode === 'dark' ? 'dark' : 'light';

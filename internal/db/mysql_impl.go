@@ -946,7 +946,7 @@ func (m *MySQLDB) QueryMultiContext(ctx context.Context, query string) ([]connec
 		return nil, err
 	}
 	defer rows.Close()
-	return scanMultiRowsForDialect(rows, "mysql")
+	return scanMultiRowsForDialectContext(ctx, rows, "mysql")
 }
 
 func (m *MySQLDB) QueryContext(ctx context.Context, query string) ([]map[string]interface{}, []string, error) {
@@ -960,7 +960,7 @@ func (m *MySQLDB) QueryContext(ctx context.Context, query string) ([]map[string]
 	}
 	defer rows.Close()
 
-	return scanRowsForDialect(rows, "mysql")
+	return scanRowsForDialectContext(ctx, rows, "mysql")
 }
 
 func (m *MySQLDB) Query(query string) ([]map[string]interface{}, []string, error) {
@@ -1073,7 +1073,7 @@ func dedupeExactTableMetadataNames(tables []string) []string {
 func normalizeMySQLIdentifierPart(ident string) string {
 	value := strings.TrimSpace(ident)
 	for i := 0; i < 4; i++ {
-		next := normalizeSQLIdentPartCommon(value)
+		next := normalizeSQLIdentPartWithBracketMode(value, false, false)
 		if next == value {
 			break
 		}
@@ -1099,7 +1099,7 @@ func quoteMySQLIdentifier(ident string) string {
 func mysqlMetadataTableParts(dbName, tableName string) (string, string) {
 	schema := normalizeMySQLIdentifierPart(dbName)
 	table := strings.TrimSpace(tableName)
-	if parsedSchema, parsedTable := SplitSQLQualifiedName(table); parsedTable != "" {
+	if parsedSchema, parsedTable := SplitSQLQualifiedNamePreserveTableQuoteForDialect(table, "mysql"); parsedTable != "" {
 		if parsedSchema != "" {
 			schema = normalizeMySQLIdentifierPart(parsedSchema)
 		}

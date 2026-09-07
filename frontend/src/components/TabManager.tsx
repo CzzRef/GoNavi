@@ -89,6 +89,8 @@ const getTabKindLabel = (tab: TabData): string => {
   if (tab.type === 'sql-file-execution') return t('sidebar.sql_file_exec.title');
   if (tab.type === 'sql-analysis') return t('tab_manager.kind_badge.sql_analysis');
   if (tab.type === 'sql-audit') return t('tab_manager.kind_badge.sql_audit');
+  if (tab.type === 'driver-manager') return t('tab_manager.kind_badge.driver_manager');
+  if (tab.type === 'settings-center') return t('tab_manager.kind_badge.settings_center');
   if (tab.type === 'message-queue') return t('message_queue_workbench.tab_kind');
   if (tab.type.startsWith('redis')) return t('tab_manager.kind_badge.redis');
   if (tab.type.startsWith('jvm')) return t('tab_manager.kind_badge.jvm');
@@ -107,6 +109,11 @@ const getTabKindLabel = (tab: TabData): string => {
 
 export const isBackgroundTaskWorkbenchTab = (tab: Pick<TabData, 'type'>): boolean => (
   tab.type === 'table-export' || tab.type === 'data-import' || tab.type === 'data-sync'
+);
+
+/** Settings center keeps its UI/state in the main App bridge; do not detach it. */
+export const isMainWindowBoundWorkbenchTab = (tab: Pick<TabData, 'type'>): boolean => (
+  tab.type === 'settings-center' || isBackgroundTaskWorkbenchTab(tab)
 );
 
 export const resolveQueryTabRenameMenuState = (
@@ -330,6 +337,8 @@ const getTabKindTooltipLabel = (tab: TabData): string => {
   if (tab.type === 'sql-file-execution') return t('sidebar.sql_file_exec.title');
   if (tab.type === 'sql-analysis') return t('tab_manager.hover.kind.sql_analysis');
   if (tab.type === 'sql-audit') return t('tab_manager.hover.kind.sql_audit');
+  if (tab.type === 'driver-manager') return t('tab_manager.hover.kind.driver_manager');
+  if (tab.type === 'settings-center') return t('tab_manager.hover.kind.settings_center');
   if (tab.type === 'message-queue') return t('message_queue_workbench.tab_kind');
   if (tab.type === 'redis-keys') return t('tab_manager.hover.kind.redis_keys');
   if (tab.type === 'redis-command') return t('tab_manager.hover.kind.redis_command');
@@ -364,6 +373,8 @@ const getTabObjectLabel = (tab: TabData): string => {
   if (tab.triggerName) return tab.triggerName;
   if (tab.resourcePath) return tab.resourcePath;
   if (tab.filePath) return tab.filePath;
+  if (tab.type === 'driver-manager') return t('app.tools.entry.drivers.title');
+  if (tab.type === 'settings-center') return t('app.settings.title');
   if (tab.type === 'sql-analysis' || tab.type === 'sql-audit') return tab.title;
   if (tab.type === 'message-queue') return tab.messageQueueTarget || tab.dbName || '';
   if (tab.type.startsWith('redis')) return `db${tab.redisDB ?? 0}`;
@@ -937,7 +948,7 @@ const TabManager: React.FC<TabManagerProps> = React.memo<TabManagerProps>(({ onF
   );
   const detachTabToWindow = useCallback((tabId: string, preferred?: { x?: number; y?: number; width?: number; height?: number }) => {
     const tab = tabs.find((item) => item.id === tabId);
-    if (tab && isBackgroundTaskWorkbenchTab(tab)) {
+    if (tab && isMainWindowBoundWorkbenchTab(tab)) {
       void message.warning(t('tab_manager.message.background_task_window_unavailable'));
       return;
     }
@@ -1520,7 +1531,7 @@ const TabManager: React.FC<TabManagerProps> = React.memo<TabManagerProps>(({ onF
         key: 'open-in-window',
         icon: <ExportOutlined />,
         label: t('tab_manager.menu.open_in_window'),
-        disabled: isBackgroundTaskWorkbenchTab(tab),
+        disabled: isMainWindowBoundWorkbenchTab(tab),
         onClick: () => detachTabToWindow(tab.id),
       },
       { type: 'divider' },

@@ -466,6 +466,8 @@ export interface TriggerDefinition {
   timing: string;
   event: string;
   statement: string;
+  /** ROW or STATEMENT when the backend exposes trigger firing granularity. */
+  orientation?: string;
 }
 
 export type TableExportScope = "selected" | "page" | "all" | "filteredAll";
@@ -515,6 +517,8 @@ export interface TabData {
     | "sql-file-execution"
     | "sql-analysis"
     | "sql-audit"
+    | "driver-manager"
+    | "settings-center"
     | "request-diagnostics"
     | "message-queue"
     | "redis-keys"

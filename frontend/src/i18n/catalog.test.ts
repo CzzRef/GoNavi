@@ -353,18 +353,16 @@ describe("i18n catalog", () => {
       "app.theme.query_template.reset_default",
       "app.theme.query_template.title",
       "app.theme.table_alias.description",
+      "app.theme.table_alias.custom_prefix.description",
+      "app.theme.table_alias.custom_prefix.placeholder",
+      "app.theme.table_alias.custom_prefix.title",
       "app.theme.table_alias.title",
       "app.theme.theme_settings_description",
       "app.theme.theme_settings_title",
-      "app.theme.ui_version.beta_warning",
-      "app.theme.ui_version.description",
-      "app.theme.ui_version.legacy.badge",
-      "app.theme.ui_version.legacy.description",
-      "app.theme.ui_version.legacy.label",
-      "app.theme.ui_version.platform_hint",
-      "app.theme.ui_version.title",
-      "app.theme.ui_version.v2.description",
-      "app.theme.ui_version.v2.label",
+      "app.theme.ui_version.sidebar_search.title",
+      "app.theme.ui_version.sidebar_search.command",
+      "app.theme.ui_version.sidebar_search.filter",
+      "app.theme.ui_version.sidebar_search.hint",
     ] as const;
 
     for (const language of SUPPORTED_LANGUAGES) {
@@ -375,24 +373,22 @@ describe("i18n catalog", () => {
     }
   });
 
-  it("renders the table alias setting in both theme setting variants", () => {
+  it("renders the table alias setting in theme settings", () => {
     const source = readAppSource();
     const v2Source = sliceBetween(
       source,
-      "const renderThemeSettingsContentV2 = () =>",
-      "const renderThemeSettingsContentLegacy = () =>",
-    );
-    const legacySource = sliceBetween(
-      source,
-      "const renderThemeSettingsContentLegacy = () =>",
-      "const renderThemeSettingsContent = () =>",
+      "const renderThemeSettingsContentV2 =",
+      "const renderThemeSettingsContent =",
     );
 
-    for (const settingsSource of [v2Source, legacySource]) {
-      expect(settingsSource).toContain("app.theme.table_alias.title");
-      expect(settingsSource).toContain("app.theme.table_alias.description");
-      expect(settingsSource).toContain("setAppearance({ autoAddTableAlias: checked })");
-    }
+    expect(v2Source).toContain("app.theme.table_alias.title");
+    expect(v2Source).toContain("app.theme.table_alias.description");
+    expect(v2Source).toContain("setAppearance({ autoAddTableAlias: checked })");
+    expect(v2Source).toContain("app.theme.table_alias.custom_prefix.title");
+    expect(v2Source).toContain("app.theme.table_alias.custom_prefix.description");
+    expect(v2Source).toContain("app.theme.table_alias.custom_prefix.placeholder");
+    expect(v2Source).toContain("setAppearance({ customTableAliasPrefixEnabled: checked })");
+    expect(v2Source).toContain("setAppearance({ customTableAliasPrefix: event.target.value })");
   });
 
   it("includes App shortcut modal keys required by every supported language", () => {

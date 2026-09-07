@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import TestRenderer, { act } from 'react-test-renderer';
@@ -24,6 +25,11 @@ import {
   DataSyncWorkbenchShell,
   resolveDataSyncSidebarRefreshes,
 } from './DataSyncWorkbenchShell';
+
+const dataSyncWorkbenchCss = readFileSync(
+  new URL('./DataSyncWorkbench.css', import.meta.url),
+  'utf8',
+);
 
 const buildTask = () => {
   const draft = createDataSyncTaskDraft({
@@ -76,6 +82,21 @@ describe('DataSyncWorkbenchShell', () => {
     modalConfirm.mockReset();
     vi.useRealTimers();
     vi.unstubAllGlobals();
+  });
+
+  it('masks step connectors behind stage labels', () => {
+    expect(dataSyncWorkbenchCss).toMatch(
+      /\.gn-data-sync-stage-nav button\s*\{[^}]*z-index:\s*0;[^}]*isolation:\s*isolate;/s,
+    );
+    expect(dataSyncWorkbenchCss).toMatch(
+      /\.gn-data-sync-stage-nav button:not\(:last-child\)::after\s*\{[^}]*z-index:\s*-1;/s,
+    );
+    expect(dataSyncWorkbenchCss).toMatch(
+      /\.gn-data-sync-stage-nav__label\s*\{[^}]*background:\s*var\(--gn-bg-panel,[^;]+;[^}]*padding-inline:/s,
+    );
+    expect(dataSyncWorkbenchCss).toMatch(
+      /\.gn-data-sync-stage-nav button:hover \.gn-data-sync-stage-nav__label,[\s\S]*button\[data-active='true'\] \.gn-data-sync-stage-nav__label\s*\{[^}]*background:\s*var\(--gn-bg-hover,/,
+    );
   });
 
   it('requests one target database refresh when a run finishes after writing rows', () => {
@@ -733,14 +754,25 @@ describe('DataSyncWorkbenchShell', () => {
           ['订单同步', 'First edit', 'Latest edit'].includes(input.props.value),
         )!;
     act(() => taskName().props.onChange({ target: { value: 'First edit' } }));
-    act(() => {
+    await act(async () => {
       renderer.root
         .findAllByType('button')
         .find((button) => button.children.includes('Save draft'))!
         .props.onClick();
+      await Promise.resolve();
+      await Promise.resolve();
     });
     expect(saveTask).toHaveBeenCalledTimes(1);
+    expect(saveTask).toHaveBeenCalledWith(
+      expect.objectContaining({ lifecycle: 'ready' }),
+    );
 
+    act(() => {
+      renderer.root
+        .findAllByType('button')
+        .find((button) => button.props['data-stage'] === 'endpoints')!
+        .props.onClick();
+    });
     act(() => taskName().props.onChange({ target: { value: 'Latest edit' } }));
     const submitted = saveTask.mock.calls[0]![0];
     await act(async () => {
@@ -1013,14 +1045,14 @@ describe('DataSyncWorkbenchShell', () => {
       renderer.root.findByProps({
         'data-data-sync-preflight': 'true',
         'data-preflight-task-id': 'persisted-task-42',
-        'data-status': 'stale',
+        'data-status': 'warning',
       }),
     ).toBeTruthy();
     expect(
       renderer.root
         .findAllByType('button')
         .find((button) => button.props['data-stage'] === 'preflight')!.props.title,
-    ).toBe('Configuration changed; run preflight again');
+    ).toBe('1 warnings');
     expect(renderer.root.findByProps({ 'data-dirty': 'false' })).toBeTruthy();
   });
 
@@ -1131,7 +1163,7 @@ describe('DataSyncWorkbenchShell', () => {
     ).toBeTruthy();
   });
 
-  it('publishes a draft as ready through one preflight-and-save operation', async () => {
+  it('saves a draft as ready without exposing a separate publish action', async () => {
     const task = buildTask();
     const baseGateway = createStaticDataSyncWorkbenchGateway({
       tasks: [task],
@@ -1169,11 +1201,22 @@ describe('DataSyncWorkbenchShell', () => {
       await Promise.resolve();
       await Promise.resolve();
     });
-    await act(async () => {
+    const saveButton = renderer.root
+      .findAllByType('button')
+      .find((button) => button.children.includes('Save draft'))!;
+    expect(saveButton.props.disabled).toBe(false);
+    expect(
       renderer.root
         .findAllByType('button')
-        .find((button) => button.children.includes('Publish as ready'))!
-        .props.onClick();
+        .some((button) => button.children.includes('Publish as ready')),
+    ).toBe(false);
+    expect(
+      renderer.root
+        .findAllByType('button')
+        .find((button) => button.children.includes('Run task'))!.props.title,
+    ).toBe('Save the draft as ready before running it');
+    await act(async () => {
+      saveButton.props.onClick();
       await Promise.resolve();
       await Promise.resolve();
       await Promise.resolve();
@@ -1660,7 +1703,7 @@ describe('DataSyncWorkbenchShell', () => {
     expect(renderer.root.findAllByProps({ children: '{"run":"run-a"}' })).toHaveLength(0);
   });
 
-  it('keeps a blocked publication as a draft without saving it', async () => {
+  it('keeps a blocked save-as-ready attempt as a draft without saving it', async () => {
     const task = buildTask();
     const baseGateway = createStaticDataSyncWorkbenchGateway({ tasks: [task] });
     const saveTask = vi.fn(baseGateway.saveTask);
@@ -1699,7 +1742,7 @@ describe('DataSyncWorkbenchShell', () => {
       await Promise.resolve();
       renderer.root
         .findAllByType('button')
-        .find((button) => button.children.includes('Publish as ready'))!
+        .find((button) => button.children.includes('Save draft'))!
         .props.onClick();
       await Promise.resolve();
       await Promise.resolve();
@@ -1710,7 +1753,7 @@ describe('DataSyncWorkbenchShell', () => {
       renderer.root
         .findAllByType('button')
         .some((button) => button.children.includes('Publish as ready')),
-    ).toBe(true);
+    ).toBe(false);
     expect(renderer.root.findByProps({
       'data-data-sync-preflight': 'true',
       'data-status': 'blocked',
@@ -1728,7 +1771,7 @@ describe('DataSyncWorkbenchShell', () => {
     ).toBe(true);
   });
 
-  it('saves a publication candidate immediately after its production approval', async () => {
+  it('saves a draft as ready immediately after its production approval', async () => {
     const task = buildTask();
     const baseGateway = createStaticDataSyncWorkbenchGateway({
       tasks: [task],
@@ -1765,11 +1808,16 @@ describe('DataSyncWorkbenchShell', () => {
       await Promise.resolve();
       renderer.root
         .findAllByType('button')
-        .find((button) => button.children.includes('Publish as ready'))!
+        .find((button) => button.children.includes('Save draft'))!
         .props.onClick();
       await Promise.resolve();
       await Promise.resolve();
     });
+    expect(
+      renderer.root
+        .findAllByType('button')
+        .some((button) => button.children.includes('Publish as ready')),
+    ).toBe(false);
     expect(
       renderer.root.findAllByType('button').map((button) => button.children.join('')),
     ).toContain('Begin server 10-second confirmation');

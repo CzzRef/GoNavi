@@ -785,6 +785,10 @@ func normalizeSchemaAndTableByType(dbType string, dbName string, tableName strin
 	}
 
 	if dbType == "kingbase" {
+		// DDL target parts are logical identifier values.  The metadata
+		// adapters may need to preserve a quoted final segment for their own
+		// second-pass parsing, but feeding that delimiter into the generic
+		// quoter would encode it as part of the identifier.
 		schema, table := db.SplitKingbaseQualifiedName(rawTable)
 		if schema != "" && table != "" {
 			return schema, table
@@ -795,7 +799,10 @@ func normalizeSchemaAndTableByType(dbType string, dbName string, tableName strin
 	}
 
 	if dbType == "postgres" || dbType == "highgo" || dbType == "vastbase" || dbType == "opengauss" || dbType == "gaussdb" {
-		schema, table := db.SplitSQLQualifiedName(rawTable)
+		// Keep DDL construction separate from metadata argument handling:
+		// quoteSqlIdentifierPath/quoteTableIdentByType adds the dialect
+		// delimiter itself, so the parts must not retain an input delimiter.
+		schema, table := db.SplitSQLQualifiedNameForDialect(rawTable, dbType)
 		if schema != "" && table != "" {
 			return schema, table
 		}
@@ -805,7 +812,7 @@ func normalizeSchemaAndTableByType(dbType string, dbName string, tableName strin
 	}
 
 	if dbType == "iris" {
-		schema, table := db.SplitSQLQualifiedName(rawTable)
+		schema, table := db.SplitSQLQualifiedNameForDialect(rawTable, dbType)
 		if schema != "" && table != "" {
 			return schema, table
 		}
@@ -818,12 +825,26 @@ func normalizeSchemaAndTableByType(dbType string, dbName string, tableName strin
 		return rawDB, rawTable
 	}
 
-	if parts := strings.SplitN(rawTable, ".", 2); len(parts) == 2 {
-		schema := strings.TrimSpace(parts[0])
-		table := strings.TrimSpace(parts[1])
-		if schema != "" && table != "" {
+	if dbType == "sqlite" {
+		return normalizeSQLiteSchemaAndTable(rawDB, rawTable)
+	}
+
+	// Use the quote-aware splitter for ordinary SQL dialects. A table name
+	// such as `Sales.Data` is one identifier; strings.SplitN would incorrectly
+	// turn the dot inside its delimiters into a schema separator. Preserve the
+	// final delimiter for dialects whose driver parses this argument again.
+	if shouldPreserveQuotedTableSegment(dbType) {
+		if schema, table := db.SplitSQLQualifiedNamePreserveTableQuoteForDialect(rawTable, dbType); table != "" {
+			if schema != "" {
+				return schema, table
+			}
+			return rawDB, table
+		}
+	} else if schema, table := db.SplitSQLQualifiedNameForDialect(rawTable, dbType); table != "" {
+		if schema != "" {
 			return schema, table
 		}
+		return rawDB, table
 	}
 
 	switch dbType {
@@ -841,7 +862,7 @@ func resolveCreateStatementTargets(config connection.ConnectionConfig, dbType st
 			metadataDB = strings.TrimSpace(config.Database)
 		}
 		rawTable := strings.TrimSpace(tableName)
-		schema, table := db.SplitSQLQualifiedName(rawTable)
+		schema, table := db.SplitSQLQualifiedNameForDialect(rawTable, dbType)
 		if table == "" {
 			table = rawTable
 		}
@@ -851,8 +872,23 @@ func resolveCreateStatementTargets(config connection.ConnectionConfig, dbType st
 		return metadataDB, rawTable, schema, table
 	}
 
-	schema, table := normalizeSchemaAndTableByType(dbType, dbName, tableName)
-	return schema, table, schema, table
+	// Metadata adapters and DDL rendering intentionally use different forms:
+	// adapters that parse the table argument a second time need the delimiter
+	// preserved around a dotted final identifier, while the DDL quoter must see
+	// the logical value so it can add exactly one delimiter itself.
+	ddlSchemaName, ddlTableName := normalizeSchemaAndTableByType(dbType, dbName, tableName)
+	metadataSchemaName, metadataTableName := normalizeMetadataSchemaAndTable(config, dbName, tableName)
+	// Kingbase's fallback builder and metadata adapters use the explicit
+	// public schema contract for an unqualified table. Keep the generic
+	// PostgreSQL-family metadata path search_path-aware, but do not pass an
+	// empty schema to this legacy-compatible Kingbase fallback.
+	if dbType == "kingbase" && strings.TrimSpace(metadataSchemaName) == "" && strings.TrimSpace(ddlSchemaName) != "" {
+		metadataSchemaName = ddlSchemaName
+	}
+	if strings.TrimSpace(metadataTableName) == "" {
+		metadataSchemaName, metadataTableName = ddlSchemaName, ddlTableName
+	}
+	return metadataSchemaName, metadataTableName, ddlSchemaName, ddlTableName
 }
 
 func quoteTableIdentByType(dbType string, schema string, table string) string {
@@ -1127,6 +1163,9 @@ type dbQueryMultiAuditOptions struct {
 	executionContext          context.Context
 	synchronousConnectionWait bool
 	classifyConnectionErrors  bool
+	// RowBudget 为每个结果集的物化行数上限，0 表示不限制。
+	// 仅无界面调用方（如 MCP）需要设置；达到上限后停止读取并标记截断。
+	RowBudget int
 }
 
 func buildQueryConnectionFailure(err error, queryID string, classify bool) connection.QueryResult {
@@ -1623,6 +1662,13 @@ func (a *App) dbQueryMulti(
 	}
 
 	ctx, cancel := newQueryExecutionContextWithParent(auditOptions.executionContext, runConfig)
+	// 行预算通过 context 下传到 db 层扫描函数：达到上限后扫描停止 rows.Next，
+	// 由方言层既有的 rows.Close 释放 Rows 与连接，而不是物化后再截断。
+	var rowBudget *db.RowBudget
+	if auditOptions.RowBudget > 0 {
+		rowBudget = db.NewRowBudget(auditOptions.RowBudget)
+		ctx = db.ContextWithRowBudget(ctx, rowBudget)
+	}
 	if deadline, ok := ctx.Deadline(); ok {
 		requestTrace.SetRequestMetadata("", "", deadline)
 	}
@@ -1842,6 +1888,7 @@ func (a *App) dbQueryMulti(
 				appendStatementAudit(statement, index+1, auditStartedAt, 0, 0, sqlaudit.BoundaryModeDriverAPI, sqlaudit.CommitModeAuto, nil)
 			}
 		}
+		applyRowBudgetTruncation(results, rowBudget)
 		return summarizeMultiStatementResult(connection.QueryResult{Success: true, Data: results, Messages: resultMessages, QueryID: queryID}, statementCount, 0, sqlaudit.BoundaryModeDriverAPI, false)
 	}
 
@@ -1957,6 +2004,10 @@ func (a *App) dbQueryMulti(
 	summaryBoundaryMode := sqlaudit.BoundaryModeImplicit
 	summaryCommitMode := sqlaudit.CommitModeAuto
 	for idx, stmt := range statements {
+		if rowBudget.Truncated() {
+			// 前一语句已达行预算并停止读取，剩余语句不再执行。
+			break
+		}
 		stmt = strings.TrimSpace(stmt)
 		if stmt == "" {
 			continue
@@ -2208,7 +2259,19 @@ func (a *App) dbQueryMulti(
 	if len(statements) > 1 {
 		fallbackMsg = buildSequentialFallbackMessage(len(statements))
 	}
+	applyRowBudgetTruncation(resultSets, rowBudget)
 	return summarizeMultiStatementResultWithCommitMode(connection.QueryResult{Success: true, Data: resultSets, QueryID: queryID, Message: fallbackMsg}, executedCount, 0, summaryBoundaryMode, summaryCommitMode, false)
+}
+
+// applyRowBudgetTruncation 在达到行预算后，把截断标记落到最后物化的结果集上：
+// 预算耗尽即停止读取，最后一个结果集就是被截断的那个。多结果集扫描路径
+// （scanMultiRows / SQL Server）已在结果集内自带标记，此处是单结果集路径的
+// 统一入口，重复标记幂等。
+func applyRowBudgetTruncation(results []connection.ResultSetData, budget *db.RowBudget) {
+	if budget == nil || !budget.Truncated() || len(results) == 0 {
+		return
+	}
+	results[len(results)-1].Truncated = true
 }
 
 func normalizeNativeResultStatementIndexes(dbType string, statements []string, results []connection.ResultSetData) {
@@ -2404,14 +2467,14 @@ func looksLikeSQLServerProcedureInvocation(query string) bool {
 		return false
 	}
 
-	next, ok := skipSQLIdentifierToken(query, pos)
+	next, ok := skipSQLIdentifierToken(query, pos, "sqlserver")
 	if !ok || next <= pos {
 		return false
 	}
 	pos = skipSQLTrivia(query, next)
 	for pos < len(query) && query[pos] == '.' {
 		pos = skipSQLTrivia(query, pos+1)
-		next, ok = skipSQLIdentifierToken(query, pos)
+		next, ok = skipSQLIdentifierToken(query, pos, "sqlserver")
 		if !ok || next <= pos {
 			return false
 		}
@@ -2935,15 +2998,60 @@ func lookupExactTableExists(database tableNameMetadataProvider, dbName, tableNam
 	return containsExactTableName(tables, tableName), nil
 }
 
+// usesBareTableCatalogNames identifies drivers whose GetTables result is the
+// object name only. Query text may retain a delimiter around a dotted literal,
+// but exact catalog comparison must receive the logical object name.
+func usesBareTableCatalogNames(dbType string) bool {
+	switch strings.ToLower(strings.TrimSpace(dbType)) {
+	case "mysql", "mariadb", "oceanbase", "diros", "starrocks", "sphinx", "tidb", "clickhouse", "tdengine":
+		return true
+	default:
+		return false
+	}
+}
+
 func normalizeTableExistsLookup(config connection.ConnectionConfig, dbName, tableName string) (string, string) {
-	// MySQL-family drivers enumerate TABLE_NAME without the database prefix,
-	// while callers may pass a qualified object (database.table) from a data
-	// sync mapping. Keep the database in the GetTables argument and compare the
-	// bare table name, matching the contract used by GetColumns and DDL paths.
-	switch resolveDDLDBType(config) {
-	case "mysql", "mariadb":
+	dbType := resolveDDLDBType(config)
+	if usesBareTableCatalogNames(dbType) {
+		if schema, table := normalizeMetadataSchemaAndTable(config, dbName, tableName); strings.TrimSpace(table) != "" {
+			// Metadata normalization preserves a quoted dotted final segment for
+			// DDL helpers. GetTables, however, returns its logical bare name.
+			if _, logicalTable := db.SplitSQLQualifiedNameForDialect(table, dbType); strings.TrimSpace(logicalTable) != "" {
+				table = logicalTable
+			}
+			return schema, table
+		}
+	}
+
+	if dbType == "sqlite" {
+		// SQLite normalization already distinguishes an attached-database
+		// qualifier from a literal dotted table name. Do not parse its bare
+		// catalog result again or `order.items` would be split incorrectly.
 		if schema, table := normalizeMetadataSchemaAndTable(config, dbName, tableName); strings.TrimSpace(table) != "" {
 			return schema, table
+		}
+	}
+
+	if dbType == "sqlserver" {
+		// SQL Server metadata returns dotted table names as
+		// `[schema].[order.items]`. Match that canonical form when the query
+		// uses a bracketed dotted final segment; ordinary schema.table names
+		// retain their existing catalog spelling.
+		segments := db.SplitSQLIdentifierPathForDialect(tableName, "sqlserver")
+		if len(segments) >= 1 && segments[len(segments)-1].Quoted && strings.Contains(segments[len(segments)-1].Value, ".") {
+			quote := func(value string) string {
+				return "[" + strings.ReplaceAll(strings.TrimSpace(value), "]", "]]") + "]"
+			}
+			schemaParts := make([]string, 0, len(segments)-1)
+			for _, segment := range segments[:len(segments)-1] {
+				if value := strings.TrimSpace(segment.Value); value != "" {
+					schemaParts = append(schemaParts, quote(value))
+				}
+			}
+			if len(schemaParts) == 0 {
+				schemaParts = append(schemaParts, quote("dbo"))
+			}
+			return dbName, strings.Join(schemaParts, ".") + "." + quote(segments[len(segments)-1].Value)
 		}
 	}
 	return dbName, tableName
@@ -3076,7 +3184,15 @@ func resolveCreateStatementWithFallbackWithText(dbInst db.Database, config conne
 			if columns, err := loadCreateStatementCommentColumns(dbInst, dbType, metadataSchemaName, metadataTableName); err == nil {
 				sqlStr = appendCreateStatementColumnComments(dbType, ddlSchemaName, ddlTableName, sqlStr, columns)
 			}
-			sqlStr = appendCreateStatementTableComment(dbInst, dbType, metadataSchemaName, metadataTableName, ddlSchemaName, ddlTableName, sqlStr)
+			sqlStr = appendCreateStatementTableComment(
+				dbInst,
+				dbType,
+				metadataSchemaName,
+				metadataTableName,
+				ddlSchemaName,
+				ddlTableName,
+				sqlStr,
+			)
 			return sqlStr, nil
 		}
 		if isOceanBaseOracleProtocol(config) {
@@ -3126,7 +3242,15 @@ func resolveCreateStatementWithFallbackWithText(dbInst db.Database, config conne
 		}
 		return "", buildErr
 	}
-	fallbackDDL = appendCreateStatementTableComment(dbInst, dbType, metadataSchemaName, metadataTableName, ddlSchemaName, ddlTableName, fallbackDDL)
+	fallbackDDL = appendCreateStatementTableComment(
+		dbInst,
+		dbType,
+		metadataSchemaName,
+		metadataTableName,
+		ddlSchemaName,
+		ddlTableName,
+		fallbackDDL,
+	)
 	return fallbackDDL, nil
 }
 
@@ -3705,7 +3829,11 @@ func formatAppOracleColumnType(row map[string]interface{}) string {
 		precision, hasPrecision := appOracleRowInt(row, "DATA_PRECISION", "NUMERIC_PRECISION", "data_precision", "numeric_precision")
 		if hasPrecision && precision > 0 {
 			scale, hasScale := appOracleRowInt(row, "DATA_SCALE", "NUMERIC_SCALE", "data_scale", "numeric_scale")
-			if hasScale && scale > 0 {
+			// 负 scale 必须保留，理由与 internal/db 的 formatOracleColumnType 相同：
+			// Oracle 的 NUMBER(10,-2) 表示向左舍入到百位，丢掉负号会显示成
+			// NUMBER(10) 而改变精度语义。这两条路径都可能被 DBGetColumns 走到
+			// （db 层返回空列表时才走本兜底），保持一致才不会让同一列显示出两种类型。
+			if hasScale && scale != 0 {
 				return fmt.Sprintf("%s(%d,%d)", dataType, precision, scale)
 			}
 			return fmt.Sprintf("%s(%d)", dataType, precision)
