@@ -1,0 +1,11 @@
+# gonavi project rules
+
+<!-- codenote-project-router:v1 -->
+
+## Project gates and routes
+
+For code, UI, data, build, deployment or runtime work, read the relevant [local context](local-context.md) and its linked owner before acting. It retains this project's SQL, environment, browser identity, preview and real-acceptance constraints. Commands do not grant permission to start services or mutate data. Simple questions need no process preflight.
+
+
+
+Keep this index and local-context.md project-owned. Generated host entries and global-core.generated.md are updated from CodeNote; do not hand-maintain copies of global procedures.
