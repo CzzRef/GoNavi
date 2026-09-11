@@ -1,7 +1,7 @@
 # GoNavi 项目约束
 
 Tool: tool-neutral
-Date: 2026-09-03
+Date: 2026-09-07
 
 ## 仓库是什么
 
@@ -21,6 +21,7 @@ Wails/Go + React 桌面端、Headless CLI、MCP server、Web server。AI-DB 治�
 - 来源：`upstream` = `Syngnat/GoNavi`，默认合 `upstream/dev`
 - 备份：`origin` = `CzzRef/GoNavi`
 - **不要**用 `czz-dev` 直接对 `upstream/dev` 开 PR。从最新 `upstream/dev` 另起压平分支。
+- 改了 `shared/i18n/*.json` 必须 `go generate ./shared/i18n`，并把 `catalog.zip` 一并纳入压平提交。漏掉时 `TestCatalogZipInSyncWithJSON` 会在 Full backend suite 失败；合入过期 zip 还会覆盖上游已同步的 zip。
 - 永久不进上游 PR：`vibe/`、`czz-docs/`、`.codemark/`、`build/evidence/`、`.gitignore` 的 `.agents/`、`frontend/package.json.md5`、读 CSS 断言像素的用例。
 
 ## 核验

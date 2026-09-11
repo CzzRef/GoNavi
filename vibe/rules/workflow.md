@@ -1,7 +1,7 @@
 # GoNavi 命令与核验
 
 Tool: tool-neutral
-Date: 2026-09-03
+Date: 2026-09-07
 
 ## 后端
 
@@ -16,6 +16,17 @@ go vet ./internal/ai/... ./internal/app/... ./internal/mcpserver/
 只验证后端时：`go build ./internal/... ./cmd/...`（根目录全量 `go build ./...` 需要 `frontend/dist`）。
 
 已知预存在：`internal/app` 全包跑时 `TestFetchReleaseByURLFallsBackToCacheOn403` 可能失败（`updateReleaseCache` 全局状态）。
+
+## i18n catalog
+
+改了 `shared/i18n/*.json` 后：
+
+```bash
+go generate ./shared/i18n
+go test ./shared/i18n
+```
+
+`catalog.zip` 是入库生成物，必须与六个语言 JSON 逐字节一致。
 
 ## 前端
 
